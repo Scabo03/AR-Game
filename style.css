@@ -1,0 +1,2193 @@
+/* ============================================================
+   STYLE.CSS — AR1 Manager
+   Tema: sfondo nero, testo bianco, palette a sei colori tematici.
+   Accessibilità WCAG AAA. Ottimizzato per VoiceOver su iPhone.
+   ============================================================ */
+
+/* ============================================================
+   VARIABILI GLOBALI
+   ============================================================ */
+:root {
+  /* Palette tematica */
+  --colore-operazioni:  #FF6600;
+  --colore-persone:     #00AAFF;
+  --colore-tecnica:     #00FF66;
+  --colore-economia:    #FFD700;
+  --colore-relazioni:   #FF2222;
+  --colore-panorama:    #FFFFFF;
+
+  /* Colori base */
+  --sfondo:             #000000;
+  --testo-principale:   #FFFFFF;
+  --testo-secondario:   #CCCCCC;
+  --bordo:              #333333;
+  --bordo-attivo:       #555555;
+  --sfondo-elemento:    #111111;
+  --sfondo-elemento-alt:#0A0A0A;
+
+  /* Tipografia */
+  --font-base: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --dim-corpo:     16px;
+  --dim-piccolo:   16px;
+  --dim-sezione:   20px;
+  --dim-titolo:    26px;
+  --dim-principale:32px;
+
+  /* Spaziatura */
+  --spazio-xs: 4px;
+  --spazio-s:  8px;
+  --spazio-m:  16px;
+  --spazio-l:  24px;
+  --spazio-xl: 40px;
+
+  /* Touch target minimo 44x44px (requisito Apple) */
+  --touch-min: 44px;
+
+  /* Raggio bordi */
+  --raggio: 6px;
+
+  /* Variabili alias — usate in sotto-componenti */
+  --dim-intestazione: var(--dim-corpo);
+  --sfondo-evidenziato: #1A1A1A;
+}
+
+/* ============================================================
+   RESET E BASE
+   ============================================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  font-size: var(--dim-corpo);
+  background-color: var(--sfondo);
+  color: var(--testo-principale);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-base);
+  background-color: var(--sfondo);
+  color: var(--testo-principale);
+  min-height: 100dvh;
+  min-height: -webkit-fill-available;
+  overflow-x: hidden;
+  line-height: 1.5;
+  /* Elimina il ritardo 300ms al tap su Safari iOS per tutta l'app */
+  touch-action: manipulation;
+  /* Safe area per iPhone con notch */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
+/* ============================================================
+   ACCESSIBILITÀ — CLASSI UTILITY
+   ============================================================ */
+
+/* Nasconde visivamente ma leggibile da VoiceOver */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Rimuove animazioni per chi le ha disabilitate */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Focus visibile — mai rimosso */
+:focus-visible {
+  outline: 3px solid var(--testo-principale);
+  outline-offset: 3px;
+}
+
+/* ============================================================
+   LAYOUT SCHERMATA
+   ============================================================ */
+
+.schermata {
+  display: none;
+  min-height: 100dvh;
+  width: 100%;
+}
+
+.schermata.attiva {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ============================================================
+   SCHERMATA INIZIALE
+   ============================================================ */
+
+#schermata-iniziale {
+  justify-content: center;
+  align-items: center;
+  padding: var(--spazio-xl) var(--spazio-m);
+}
+
+.contenitore-centrato {
+  width: 100%;
+  max-width: 480px;
+  text-align: center;
+}
+
+.titolo-principale {
+  font-size: var(--dim-principale);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--spazio-s);
+  color: var(--testo-principale);
+}
+
+.sottotitolo {
+  font-size: var(--dim-sezione);
+  color: var(--testo-secondario);
+  margin-bottom: var(--spazio-xl);
+}
+
+.lista-menu-principale {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spazio-m);
+}
+
+.btn-menu-principale {
+  width: 100%;
+  min-height: var(--touch-min);
+  padding: var(--spazio-m) var(--spazio-l);
+  font-size: var(--dim-sezione);
+  font-family: var(--font-base);
+  font-weight: 600;
+  background-color: var(--sfondo-elemento);
+  color: var(--testo-principale);
+  border: 2px solid var(--bordo-attivo);
+  border-radius: var(--raggio);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-menu-principale:hover,
+.btn-menu-principale:focus-visible {
+  background-color: #1A1A1A;
+  border-color: var(--testo-principale);
+}
+
+.btn-menu-principale:disabled {
+  color: var(--testo-secondario);
+  border-color: var(--bordo);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ============================================================
+   INTESTAZIONE DI GIOCO
+   ============================================================ */
+
+#intestazione-gioco {
+  background-color: var(--sfondo-elemento);
+  border-bottom: 1px solid var(--bordo);
+  padding: var(--spazio-s) var(--spazio-m);
+}
+
+.status-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spazio-m);
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+}
+
+.status-bar span::before {
+  content: attr(data-etichetta) ': ';
+  color: var(--testo-secondario);
+}
+
+/* ============================================================
+   MENU DI NAVIGAZIONE PRINCIPALE
+   ============================================================ */
+
+#menu-principale {
+  background-color: var(--sfondo-elemento);
+  border-bottom: 1px solid var(--bordo);
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.lista-menu-gioco {
+  list-style: none;
+  display: flex;
+  min-width: max-content;
+}
+
+.voce-menu {
+  min-height: var(--touch-min);
+  padding: var(--spazio-s) var(--spazio-m);
+  font-size: var(--dim-piccolo);
+  font-family: var(--font-base);
+  font-weight: 600;
+  background: none;
+  color: var(--testo-secondario);
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.voce-menu:hover,
+.voce-menu:focus-visible {
+  color: var(--testo-principale);
+}
+
+.voce-menu.attiva {
+  color: var(--testo-principale);
+}
+
+/* Bordo inferiore colorato per voce attiva */
+.voce-menu.attiva.colore-operazioni { border-bottom-color: var(--colore-operazioni); color: var(--colore-operazioni); }
+.voce-menu.attiva.colore-persone    { border-bottom-color: var(--colore-persone);    color: var(--colore-persone);    }
+.voce-menu.attiva.colore-tecnica    { border-bottom-color: var(--colore-tecnica);    color: var(--colore-tecnica);    }
+.voce-menu.attiva.colore-economia   { border-bottom-color: var(--colore-economia);   color: var(--colore-economia);   }
+.voce-menu.attiva.colore-relazioni  { border-bottom-color: var(--colore-relazioni);  color: var(--colore-relazioni);  }
+.voce-menu.attiva.colore-panorama   { border-bottom-color: var(--colore-panorama);   color: var(--colore-panorama);   }
+
+/* ============================================================
+   AREA CONTENUTO PRINCIPALE
+   ============================================================ */
+
+#area-contenuto {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--spazio-m);
+}
+
+.sezione-gioco {
+  display: none;
+}
+
+.sezione-gioco.attiva {
+  display: block;
+}
+
+.nascosta {
+  display: none !important;
+}
+
+/* ============================================================
+   TITOLI E INTESTAZIONI SEZIONE
+   ============================================================ */
+
+.titolo-sezione {
+  font-size: var(--dim-sezione);
+  font-weight: 700;
+  margin-bottom: var(--spazio-l);
+  padding-bottom: var(--spazio-s);
+  border-bottom: 2px solid currentColor;
+}
+
+.colore-operazioni { color: var(--colore-operazioni); }
+.colore-persone    { color: var(--colore-persone);    }
+.colore-tecnica    { color: var(--colore-tecnica);    }
+.colore-economia   { color: var(--colore-economia);   }
+.colore-relazioni  { color: var(--colore-relazioni);  }
+.colore-panorama   { color: var(--colore-panorama);   }
+
+/* Bordi colorati per elementi attivi */
+.bordo-operazioni { border-color: var(--colore-operazioni); }
+.bordo-persone    { border-color: var(--colore-persone);    }
+.bordo-tecnica    { border-color: var(--colore-tecnica);    }
+.bordo-economia   { border-color: var(--colore-economia);   }
+.bordo-relazioni  { border-color: var(--colore-relazioni);  }
+.bordo-panorama   { border-color: var(--colore-panorama);   }
+
+/* ============================================================
+   CARD INFORMATIVA GENERICA
+   ============================================================ */
+
+.card {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+}
+
+.card-intestazione {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--spazio-s);
+}
+
+.card h3 {
+  font-size: var(--dim-corpo);
+  font-weight: 600;
+  color: var(--testo-principale);
+}
+
+.card-valore {
+  font-size: var(--dim-sezione);
+  font-weight: 700;
+  color: var(--testo-principale);
+}
+
+.card-etichetta {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  margin-top: var(--spazio-xs);
+}
+
+/* ============================================================
+   LISTA DATI (dl/dt/dd per coppie chiave-valore)
+   ============================================================ */
+
+.lista-dati {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--spazio-xs) var(--spazio-m);
+  align-items: baseline;
+}
+
+.lista-dati dt {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  white-space: nowrap;
+}
+
+.lista-dati dd {
+  font-size: var(--dim-corpo);
+  font-weight: 600;
+  color: var(--testo-principale);
+}
+
+/* ============================================================
+   LISTA CLASSIFICA
+   ============================================================ */
+
+.lista-classifica {
+  list-style: none;
+}
+
+.lista-semplice {
+  list-style: disc;
+  padding-left: 1.4em;
+  margin: var(--spazio-xs) 0 0;
+}
+
+.lista-semplice li {
+  padding: var(--spazio-xs) 0;
+  font-size: var(--dim-corpo);
+  line-height: 1.5;
+}
+
+.riga-classifica {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-m);
+  padding: var(--spazio-s) 0;
+  border-bottom: 1px solid var(--bordo);
+  min-height: var(--touch-min);
+}
+
+.riga-classifica:last-child {
+  border-bottom: none;
+}
+
+/* Variante storico stagioni con riga di dettaglio */
+.riga-classifica--dettaglio {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.riga-storico-principale {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-m);
+  min-height: var(--touch-min);
+}
+
+.dettaglio-storico {
+  font-size: 13px;
+  color: var(--testo-secondario);
+  margin: 0 0 var(--spazio-xs) 0;
+  padding-left: calc(28px + var(--spazio-m)); /* allineato dopo la colonna stagione */
+}
+
+.posizione-classifica {
+  font-size: var(--dim-corpo);
+  font-weight: 700;
+  min-width: 28px;
+  text-align: right;
+  color: var(--testo-secondario);
+}
+
+.posizione-classifica.podio {
+  color: var(--colore-economia); /* Oro per top 3 */
+}
+
+.nome-classifica {
+  flex: 1;
+  font-size: var(--dim-corpo);
+}
+
+.punti-classifica {
+  font-size: var(--dim-corpo);
+  font-weight: 700;
+  text-align: right;
+  min-width: 48px;
+}
+
+.giocatore-highlight {
+  background-color: #111111;
+  border-left: 3px solid var(--testo-principale);
+  padding-left: var(--spazio-s);
+}
+
+/* ============================================================
+   PULSANTI AZIONE
+   ============================================================ */
+
+.btn-azione {
+  min-height: var(--touch-min);
+  padding: var(--spazio-s) var(--spazio-l);
+  font-size: var(--dim-corpo);
+  font-family: var(--font-base);
+  font-weight: 600;
+  background-color: var(--testo-principale);
+  color: var(--sfondo);
+  border: none;
+  border-radius: var(--raggio);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.1s;
+}
+
+.btn-azione:hover,
+.btn-azione:focus-visible {
+  opacity: 0.85;
+}
+
+.btn-azione:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-secondario {
+  background-color: transparent;
+  color: var(--testo-principale);
+  border: 2px solid var(--bordo-attivo);
+}
+
+.btn-secondario:hover,
+.btn-secondario:focus-visible {
+  border-color: var(--testo-principale);
+  opacity: 1;
+}
+
+/* Pulsanti + e − per valori numerici */
+.gruppo-stepper {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-s);
+}
+
+.btn-stepper {
+  width: var(--touch-min);
+  height: var(--touch-min);
+  font-size: 22px;
+  font-weight: 300;
+  background-color: var(--sfondo-elemento);
+  color: var(--testo-principale);
+  border: 1px solid var(--bordo-attivo);
+  border-radius: var(--raggio);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-stepper:hover,
+.btn-stepper:focus-visible {
+  border-color: var(--testo-principale);
+}
+
+.valore-stepper {
+  min-width: 60px;
+  text-align: center;
+  font-size: var(--dim-corpo);
+  font-weight: 700;
+}
+
+/* ============================================================
+   GRUPPO AZIONI (contenitore pulsanti)
+   ============================================================ */
+
+.gruppo-azioni {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spazio-m);
+  margin-top: var(--spazio-l);
+}
+
+/* ============================================================
+   PANNELLO OVERLAY (sessioni e dialoghi)
+   ============================================================ */
+
+.pannello-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: var(--sfondo);
+  z-index: 100;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--spazio-m);
+  padding-top: calc(var(--spazio-m) + env(safe-area-inset-top));
+  padding-bottom: calc(var(--spazio-xl) + env(safe-area-inset-bottom));
+}
+
+.contenitore-sessione {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.contenitore-dialogo {
+  max-width: 480px;
+  margin: 20vh auto 0;
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo-attivo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-l);
+}
+
+/* ============================================================
+   PAUSA INVERNALE — navigazione capitoli
+   ============================================================ */
+
+.nav-pannello {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spazio-s);
+  margin-bottom: var(--spazio-l);
+}
+
+.btn-pannello {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  color: var(--testo-principale);
+  font-size: var(--dim-piccolo);
+  padding: var(--spazio-s) var(--spazio-m);
+  min-height: 44px;
+  min-width: 44px;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.btn-pannello:hover,
+.btn-pannello:focus-visible {
+  border-color: var(--bordo-attivo);
+  outline: 2px solid var(--bordo-attivo);
+  outline-offset: 2px;
+}
+
+.btn-pannello.selezionato,
+.btn-pannello[aria-pressed="true"] {
+  border-color: var(--bordo-attivo);
+  background-color: var(--sfondo-evidenziato);
+  font-weight: 600;
+}
+
+/* Valori numerici in definitionlist dentro card */
+.valore-stat {
+  font-size: var(--dim-corpo);
+  font-weight: 600;
+  color: var(--testo-principale);
+}
+
+/* Titolo con enfasi per cambio era */
+.testo-highlight {
+  color: var(--colore-economia);  /* giallo */
+  font-size: var(--dim-intestazione);
+  font-weight: 700;
+  margin-bottom: var(--spazio-s);
+}
+
+/* Card concept macchina selezionata */
+.btn-selezionato {
+  background-color: var(--sfondo-evidenziato);
+  border-color: var(--bordo-attivo);
+}
+
+/* Bordo avviso su card (es. contratto scaduto) */
+.bordo-avviso {
+  border-left: 3px solid var(--colore-relazioni);
+}
+
+/* Bordo attenzione su card (es. contratto in scadenza a breve) */
+.bordo-attenzione {
+  border-left: 3px solid var(--colore-economia);
+}
+
+/* Età pilota inline */
+.eta-pilota {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  margin-left: var(--spazio-s);
+}
+
+.descrizione-sessione {
+  color: var(--testo-secondario);
+  margin-bottom: var(--spazio-l);
+}
+
+/* ============================================================
+   BOX METEO
+   ============================================================ */
+
+#box-meteo {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-l);
+}
+
+.titolo-box-meteo {
+  font-size: var(--dim-corpo);
+  color: var(--colore-persone); /* Azzurro per meteo */
+  margin-bottom: var(--spazio-s);
+}
+
+/* ============================================================
+   EVENTI GARA
+   ============================================================ */
+
+#eventi-gara {
+  margin-top: var(--spazio-m);
+}
+
+/* ============================================================
+   SCHEDA PILOTA (old placeholder removed — definitions below at line ~1808)
+   ============================================================ */
+
+/* Indicatore umore */
+.indicatore-umore {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-s);
+  font-size: var(--dim-piccolo);
+}
+
+.barra-umore {
+  flex: 1;
+  height: 6px;
+  background-color: var(--bordo);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.riempimento-umore {
+  height: 100%;
+  background-color: var(--colore-tecnica);
+  border-radius: 3px;
+}
+
+/* ============================================================
+   SCHEDA CIRCUITO (calendario)
+   ============================================================ */
+
+.scheda-circuito {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-s);
+}
+
+.scheda-circuito.round-corrente {
+  border-color: var(--colore-operazioni);
+}
+
+.scheda-circuito.round-completato {
+  opacity: 0.5;
+}
+
+.intestazione-circuito {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spazio-xs);
+}
+
+.nome-circuito {
+  font-size: var(--dim-corpo);
+  font-weight: 600;
+}
+
+.data-circuito {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+}
+
+.badge-sprint {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--colore-economia);
+  border: 1px solid var(--colore-economia);
+  border-radius: 3px;
+  padding: 1px 5px;
+  margin-left: var(--spazio-s);
+}
+
+/* ============================================================
+   INDICATORI DI PERFORMANCE (barre percentuale)
+   ============================================================ */
+
+.riga-performance {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-s);
+  margin-bottom: var(--spazio-s);
+}
+
+.etichetta-performance {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  min-width: 120px;
+}
+
+.barra-performance {
+  flex: 1;
+  height: 8px;
+  background-color: var(--bordo);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.riempimento-performance {
+  height: 100%;
+  border-radius: 4px;
+  background-color: var(--colore-tecnica);
+}
+
+.valore-performance {
+  font-size: var(--dim-piccolo);
+  font-weight: 700;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* ============================================================
+   SEZIONE SCHERMATA DI GIOCO
+   ============================================================ */
+
+#schermata-gioco {
+  display: none;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+#schermata-gioco.attiva {
+  display: flex;
+}
+
+/* ============================================================
+   BADGE MESCOLE GOMME
+   ============================================================ */
+
+.badge-mescola {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 3px;
+  border: 1px solid currentColor;
+}
+
+.mescola-C1, .mescola-C2                 { color: var(--testo-principale); border-color: var(--testo-principale); }
+.mescola-C3                              { color: var(--colore-economia);   border-color: var(--colore-economia);  }
+.mescola-C4, .mescola-C5, .mescola-C6   { color: var(--colore-relazioni);  border-color: var(--colore-relazioni); }
+.mescola-INTERMEDIA                      { color: var(--colore-tecnica);    border-color: var(--colore-tecnica);   }
+.mescola-FULL_WET                        { color: var(--colore-persone);    border-color: var(--colore-persone);   }
+
+/* ============================================================
+   MESSAGGI DI STATO E AVVISI
+   ============================================================ */
+
+.messaggio-stato {
+  padding: var(--spazio-m);
+  border-radius: var(--raggio);
+  margin-bottom: var(--spazio-m);
+  border: 1px solid var(--bordo);
+  font-size: var(--dim-corpo);
+}
+
+.messaggio-avviso {
+  border-color: var(--colore-economia);
+  color: var(--colore-economia);
+}
+
+.messaggio-errore {
+  border-color: var(--colore-relazioni);
+  color: var(--colore-relazioni);
+}
+
+.messaggio-successo {
+  border-color: var(--colore-tecnica);
+  color: var(--colore-tecnica);
+}
+
+/* ============================================================
+   SEPARATORI E SPAZIATURA
+   ============================================================ */
+
+.separatore {
+  border: none;
+  border-top: 1px solid var(--bordo);
+  margin: var(--spazio-l) 0;
+}
+
+.margine-sopra { margin-top: var(--spazio-m); }
+.margine-sotto { margin-bottom: var(--spazio-m); }
+
+/* ============================================================
+   TABELLA DATI
+   ============================================================ */
+
+.tabella-dati {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--dim-piccolo);
+}
+
+.tabella-dati th {
+  text-align: left;
+  color: var(--testo-secondario);
+  font-weight: 600;
+  padding: var(--spazio-s) var(--spazio-s) var(--spazio-xs);
+  border-bottom: 1px solid var(--bordo);
+}
+
+.tabella-dati td {
+  padding: var(--spazio-s);
+  border-bottom: 1px solid var(--sfondo-elemento-alt);
+  vertical-align: middle;
+}
+
+.tabella-dati tr:last-child td {
+  border-bottom: none;
+}
+
+.tabella-dati tr.giocatore td {
+  background-color: var(--sfondo-elemento);
+}
+
+/* ============================================================
+   SCHERMATA INTRO NUOVA PARTITA
+   ============================================================ */
+
+.contenitore-intro {
+  max-width: 520px;
+  margin: 0 auto;
+  padding-top: var(--spazio-xl);
+}
+
+.etichetta-intro {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: var(--spazio-m);
+}
+
+.titolo-intro {
+  font-size: var(--dim-principale);
+  font-weight: 700;
+  margin-bottom: var(--spazio-xl);
+  line-height: 1.2;
+}
+
+.scheda-intro-squadra {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo-attivo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+}
+
+.scheda-intro-squadra h3 {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: var(--spazio-s);
+}
+
+.scheda-intro-squadra p {
+  font-size: var(--dim-corpo);
+  font-weight: 600;
+}
+
+.scheda-intro-squadra .dettaglio {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  font-weight: 400;
+  margin-top: var(--spazio-xs);
+}
+
+/* ============================================================
+   TUTORIAL OVERLAY
+   ============================================================ */
+
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.88);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spazio-m);
+  padding-top: calc(var(--spazio-m) + env(safe-area-inset-top));
+}
+
+.tutorial-overlay:not(.nascosta) {
+  display: flex;
+}
+
+.tutorial-overlay.nascosta {
+  display: none;
+}
+
+.contenitore-tutorial {
+  background-color: var(--sfondo-elemento);
+  border: 2px solid var(--colore-economia);
+  border-radius: var(--raggio);
+  padding: var(--spazio-l);
+  max-width: 520px;
+  width: 100%;
+}
+
+.etichetta-tutorial {
+  font-size: var(--dim-piccolo);
+  color: var(--colore-economia);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: var(--spazio-s);
+}
+
+.contenitore-tutorial h2 {
+  font-size: var(--dim-sezione);
+  font-weight: 700;
+  margin-bottom: var(--spazio-m);
+}
+
+.contenitore-tutorial p {
+  font-size: var(--dim-corpo);
+  color: var(--testo-secondario);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   WIDGET METEO — piccolo riquadro fisso durante qualifica/gara
+   ============================================================ */
+
+.widget-meteo {
+  position: fixed;
+  top: env(safe-area-inset-top, 0px);
+  right: var(--spazio-m);
+  z-index: 500;
+  background-color: #111111;
+  border: 1px solid var(--colore-operazioni);
+  border-radius: var(--raggio);
+  padding: var(--spazio-s) var(--spazio-m);
+  min-width: 160px;
+  max-width: 220px;
+}
+
+.widget-meteo-titolo {
+  font-size: var(--dim-piccolo);
+  color: var(--colore-operazioni);
+  font-weight: 700;
+  margin-bottom: var(--spazio-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.widget-meteo-voce {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-principale);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Versione prominente durante la gara */
+.widget-meteo--gara {
+  border-left: 3px solid var(--colore-operazioni);
+  min-width: 180px;
+}
+.widget-meteo--gara .widget-meteo-titolo {
+  font-size: 13px;
+}
+
+/* ============================================================
+   QUALIFICA AR1 — etichetta segmento e ordinamento checkpoint
+   ============================================================ */
+
+.etichetta-segmento {
+  display: inline-block;
+  font-size: var(--dim-piccolo);
+  font-weight: 700;
+  color: var(--colore-economia);
+  border: 1px solid var(--colore-economia);
+  border-radius: var(--raggio);
+  padding: 2px var(--spazio-s);
+  margin-bottom: var(--spazio-m);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.intestazione-checkpoint {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--spazio-s);
+}
+
+.info-checkpoint {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+}
+
+/* Griglia tempi qualifica */
+.riga-qualifica {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-s);
+  padding: var(--spazio-s) var(--spazio-m);
+  border-bottom: 1px solid var(--bordo);
+}
+
+.riga-qualifica.giocatore-highlight {
+  background-color: #0a1a0a;
+  border-left: 3px solid var(--colore-tecnica);
+}
+
+.riga-qualifica.eliminato {
+  opacity: 0.45;
+}
+
+.pos-qualifica {
+  font-size: var(--dim-piccolo);
+  font-weight: 700;
+  min-width: 28px;
+  color: var(--testo-secondario);
+}
+
+.nome-qualifica {
+  flex: 1;
+  font-size: var(--dim-piccolo);
+}
+
+.tempo-qualifica {
+  font-size: var(--dim-piccolo);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--colore-economia);
+  min-width: 70px;
+  text-align: right;
+}
+
+/* Pannello decisioni pilota in qualifica */
+.pannello-pilota-qualifica {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+}
+
+.pannello-pilota-qualifica h4 {
+  font-size: var(--dim-corpo);
+  margin-bottom: var(--spazio-s);
+  color: var(--colore-persone);
+}
+
+.gruppo-decisione-qualifica {
+  display: flex;
+  gap: var(--spazio-s);
+  flex-wrap: wrap;
+  margin-bottom: var(--spazio-s);
+}
+
+.btn-gomma,
+.btn-decisione {
+  min-height: var(--touch-min);
+  min-width: var(--touch-min);
+  padding: var(--spazio-xs) var(--spazio-m);
+  border: 2px solid var(--bordo);
+  background-color: transparent;
+  color: var(--testo-principale);
+  border-radius: var(--raggio);
+  font-size: var(--dim-piccolo);
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.btn-gomma.selezionato,
+.btn-decisione.selezionato {
+  border-color: var(--colore-operazioni);
+  background-color: #1a0d00;
+  color: var(--colore-operazioni);
+  font-weight: 700;
+}
+
+/* ============================================================
+   GARA AR1 — stato live e log eventi
+   ============================================================ */
+
+.stato-gara-live {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo-attivo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+}
+
+.riga-stato-gara {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--dim-piccolo);
+  padding: var(--spazio-xs) 0;
+  border-bottom: 1px solid var(--bordo);
+}
+
+.riga-stato-gara:last-child {
+  border-bottom: none;
+}
+
+.etichetta-stato {
+  color: var(--testo-secondario);
+}
+
+.valore-stato {
+  font-weight: 700;
+  color: var(--testo-principale);
+}
+
+.valore-stato.warning {
+  color: var(--colore-economia);
+}
+
+.valore-stato.alert {
+  color: var(--colore-relazioni);
+}
+
+/* Pannello decisioni pilota in gara */
+.pannello-pilota-gara {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+}
+
+.pannello-pilota-gara h4 {
+  font-size: var(--dim-corpo);
+  margin-bottom: var(--spazio-s);
+  color: var(--colore-persone);
+}
+
+.dati-pilota-gara {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  margin-bottom: var(--spazio-s);
+}
+
+/* Log eventi gara */
+.log-eventi-gara {
+  max-height: 160px;
+  overflow-y: auto;
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-s);
+  margin-top: var(--spazio-m);
+}
+
+.evento-gara {
+  font-size: var(--dim-piccolo);
+  padding: 3px 0;
+  border-bottom: 1px solid var(--bordo);
+  line-height: 1.5;
+}
+
+.evento-gara:last-child {
+  border-bottom: none;
+}
+
+.evento-gara.safety_car,
+.evento-gara.vsc {
+  color: var(--colore-economia);
+}
+
+.evento-gara.ritiro {
+  color: var(--colore-relazioni);
+}
+
+.evento-gara.meteo_pioggia {
+  color: var(--colore-persone);
+}
+
+.giro-evento {
+  font-weight: 700;
+  margin-right: var(--spazio-xs);
+  color: var(--testo-secondario);
+}
+
+/* Classifica posizioni durante la gara */
+.riga-posizione-gara {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-s);
+  padding: var(--spazio-xs) var(--spazio-m);
+  border-bottom: 1px solid var(--bordo);
+  font-size: var(--dim-piccolo);
+}
+
+.riga-posizione-gara.giocatore-highlight {
+  background-color: #0a1a0a;
+  border-left: 3px solid var(--colore-tecnica);
+}
+
+.riga-posizione-gara.ritirato {
+  opacity: 0.4;
+}
+
+.pos-gara {
+  font-weight: 700;
+  min-width: 28px;
+  color: var(--testo-secondario);
+}
+
+.nome-pilota-gara {
+  flex: 1;
+}
+
+.gomma-gara {
+  font-size: 13px;
+  min-width: 36px;
+  text-align: center;
+}
+
+.gap-gara {
+  font-variant-numeric: tabular-nums;
+  min-width: 52px;
+  text-align: right;
+  color: var(--testo-secondario);
+}
+
+.usura-gara {
+  font-variant-numeric: tabular-nums;
+  min-width: 44px;
+  text-align: right;
+}
+
+/* ============================================================
+   RIUNIONE INFORMATIVA AR1 — multi-schermata
+   ============================================================ */
+
+.slide-riunione-ar1 {
+  margin-bottom: var(--spazio-m);
+}
+
+.slide-riunione-ar1 h3 {
+  font-size: var(--dim-sezione);
+  color: var(--colore-operazioni);
+  margin-bottom: var(--spazio-m);
+}
+
+.slide-riunione-ar1 p {
+  font-size: var(--dim-corpo);
+  color: var(--testo-secondario);
+  line-height: 1.7;
+  margin-bottom: var(--spazio-s);
+}
+
+.contatore-slide {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  text-align: right;
+  margin-bottom: var(--spazio-m);
+}
+
+/* ============================================================
+   INTER-GARA AR1 — sotto-navigazione e pannelli
+   ============================================================ */
+
+.nav-sub-operazioni {
+  display: flex;
+  gap: var(--spazio-s);
+  flex-wrap: wrap;
+  margin-bottom: var(--spazio-l);
+  padding-bottom: var(--spazio-m);
+  border-bottom: 1px solid var(--bordo);
+}
+
+.btn-sub-nav {
+  min-height: var(--touch-min);
+  padding: var(--spazio-xs) var(--spazio-m);
+  background-color: transparent;
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  color: var(--testo-secondario);
+  font-size: var(--dim-piccolo);
+  cursor: pointer;
+}
+
+.btn-sub-nav.attivo {
+  border-color: var(--colore-operazioni);
+  color: var(--colore-operazioni);
+  background-color: #0d0600;
+  font-weight: 700;
+}
+
+/* ============================================================
+   LOGISTICA — scheda riepilogativa
+   ============================================================ */
+
+.scheda-logistica {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+}
+
+.scheda-logistica dt {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  margin-top: var(--spazio-s);
+}
+
+.scheda-logistica dd {
+  font-size: var(--dim-corpo);
+  color: var(--testo-principale);
+  font-weight: 600;
+  margin-left: 0;
+}
+
+.nota-direttore {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  font-style: italic;
+  border-left: 3px solid var(--colore-operazioni);
+  padding-left: var(--spazio-m);
+  margin-top: var(--spazio-m);
+  line-height: 1.6;
+}
+
+/* ============================================================
+   TECNICA — box risorse (CFD, token, budget upgrade)
+   ============================================================ */
+
+.box-risorse {
+  background-color: #001a0d;
+  border: 2px solid var(--colore-tecnica);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-l);
+}
+
+.box-risorse-titolo {
+  font-size: var(--dim-piccolo);
+  font-weight: 700;
+  color: var(--colore-tecnica);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--spazio-s);
+}
+
+.box-risorse-dati {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--spazio-m);
+  font-size: var(--dim-corpo);
+}
+
+.box-risorse-dati dt {
+  color: var(--testo-secondario);
+  font-size: var(--dim-piccolo);
+}
+
+.box-risorse-dati dd {
+  color: var(--testo-principale);
+  font-weight: 700;
+  margin-left: 0;
+}
+
+.box-risorse-nota {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  font-style: italic;
+  margin-top: var(--spazio-s);
+  line-height: 1.5;
+}
+
+/* ============================================================
+   TECNICA — direttori di dipartimento nella schermata Macchina
+   ============================================================ */
+
+.riga-direttore-coordinatore {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spazio-xs) var(--spazio-s);
+  padding: var(--spazio-s) var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+  background-color: #001a0d;
+  border-radius: var(--raggio);
+  border-left: 3px solid var(--colore-tecnica);
+}
+
+.wrapper-dipartimento {
+  margin-bottom: var(--spazio-s);
+}
+
+.riga-direttore-dipartimento {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--spazio-xs) var(--spazio-s);
+  padding: 2px var(--spazio-m);
+  margin-top: 2px;
+  margin-bottom: var(--spazio-xs);
+  border-left: 2px solid var(--bordo);
+}
+
+.nome-direttore {
+  font-size: var(--dim-piccolo);
+  font-weight: 700;
+  color: var(--testo-principale);
+}
+
+.ruolo-direttore {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+}
+
+.stats-direttore {
+  font-size: var(--dim-piccolo);
+  color: var(--colore-tecnica);
+  margin-left: auto;
+}
+
+.nome-direttore-piccolo {
+  font-size: var(--dim-piccolo);
+  font-weight: 600;
+  color: var(--testo-principale);
+}
+
+.ruolo-direttore-piccolo {
+  font-size: 13px;
+  color: var(--testo-secondario);
+}
+
+.stats-direttore-piccolo {
+  font-size: 13px;
+  color: var(--testo-secondario);
+  margin-left: auto;
+}
+
+/* ============================================================
+   TECNICA — staff sviluppo e upgrade
+   ============================================================ */
+
+.riga-staff-sviluppo {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--spazio-xs) var(--spazio-s);
+  padding: var(--spazio-s) 0;
+  border-bottom: 1px solid var(--bordo);
+}
+
+.riga-staff-sviluppo:last-child {
+  border-bottom: none;
+}
+
+.riga-responsabile-upgrade {
+  font-size: var(--dim-piccolo);
+  color: var(--colore-tecnica);
+  margin-bottom: var(--spazio-xs);
+}
+
+/* ============================================================
+   SEZIONE TECNICA — sotto-navigazione
+   ============================================================ */
+
+.nav-sub-tecnica {
+  display: flex;
+  gap: var(--spazio-s);
+  flex-wrap: wrap;
+  margin-bottom: var(--spazio-l);
+  padding-bottom: var(--spazio-m);
+  border-bottom: 1px solid var(--bordo);
+}
+
+.btn-sub-tecnica.attivo {
+  border-color: var(--colore-tecnica);
+  color: var(--colore-tecnica);
+  background-color: #001a0d;
+  font-weight: 700;
+}
+
+.titolo-pannello-tecnica {
+  font-size: var(--dim-intestazione);
+  color: var(--colore-tecnica);
+  margin-bottom: var(--spazio-m);
+}
+
+/* ============================================================
+   TECNICA — opzioni upgrade
+   ============================================================ */
+
+.card-opzione-upgrade {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-top: var(--spazio-m);
+}
+
+.card-opzione-upgrade.opzione-disabilitata {
+  opacity: 0.5;
+}
+
+.opzione-intestazione {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-s);
+  margin-bottom: var(--spazio-s);
+}
+
+.titolo-opzione-upgrade {
+  font-weight: 700;
+  font-size: var(--dim-corpo);
+  color: var(--testo-principale);
+}
+
+.descrizione-opzione-upgrade {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  font-style: italic;
+  margin-bottom: var(--spazio-s);
+}
+
+.dati-opzione-upgrade {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--spazio-m);
+  font-size: var(--dim-piccolo);
+  margin-bottom: var(--spazio-s);
+}
+
+.dati-opzione-upgrade dt {
+  color: var(--testo-secondario);
+}
+
+.dati-opzione-upgrade dd {
+  color: var(--testo-principale);
+  font-weight: 600;
+  margin-left: 0;
+}
+
+.badge-dipartimento {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--bordo);
+  color: var(--testo-secondario);
+  white-space: nowrap;
+}
+
+.badge-aerodinamica { border-color: var(--colore-tecnica); color: var(--colore-tecnica); }
+.badge-meccanica    { border-color: var(--colore-operazioni); color: var(--colore-operazioni); }
+.badge-elettronica  { border-color: var(--colore-economia); color: var(--colore-economia); }
+.badge-powerUnit    { border-color: var(--colore-persone); color: var(--colore-persone); }
+
+.avviso-upgrade {
+  font-size: var(--dim-piccolo);
+  color: var(--colore-relazioni);
+  margin-top: var(--spazio-xs);
+}
+
+.btn-upgrade {
+  font-size: var(--dim-piccolo);
+  padding: var(--spazio-xs) var(--spazio-m);
+}
+
+.riga-upgrade-in-corso {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-s);
+  padding: var(--spazio-s) 0;
+  border-bottom: 1px solid var(--bordo);
+  flex-wrap: wrap;
+}
+
+.nome-upgrade-in-corso {
+  font-weight: 600;
+  flex: 1;
+}
+
+.consegna-upgrade {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+}
+
+.riga-upgrade-applicato {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spazio-xs) 0;
+  border-bottom: 1px solid var(--bordo);
+  font-size: var(--dim-piccolo);
+}
+
+/* ============================================================
+   TECNICA — CFD split
+   ============================================================ */
+
+.controllo-split-cfd {
+  margin: var(--spazio-m) 0;
+}
+
+.etichetta-split {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-principale);
+  margin-bottom: var(--spazio-xs);
+}
+
+.gruppo-btn-split {
+  display: flex;
+  gap: var(--spazio-s);
+  margin-top: var(--spazio-s);
+}
+
+.btn-split {
+  min-height: var(--touch-min);
+  min-width: 80px;
+  padding: var(--spazio-xs) var(--spazio-m);
+  background-color: transparent;
+  border: 1px solid var(--colore-tecnica);
+  border-radius: var(--raggio);
+  color: var(--colore-tecnica);
+  font-size: var(--dim-piccolo);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-split:disabled {
+  border-color: var(--bordo);
+  color: var(--testo-secondario);
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   TECNICA — Power Unit token
+   ============================================================ */
+
+.contenitore-token {
+  display: flex;
+  gap: var(--spazio-s);
+  margin: var(--spazio-s) 0;
+}
+
+.badge-token {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.token-disponibile { color: var(--colore-tecnica); }
+.token-usato       { color: var(--testo-secondario); }
+
+/* ============================================================
+   TECNICA — note e testi informativi
+   ============================================================ */
+
+.nota-tecnica {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  font-style: italic;
+  border-left: 3px solid var(--colore-tecnica);
+  padding-left: var(--spazio-m);
+  margin-top: var(--spazio-m);
+  line-height: 1.6;
+}
+
+.testo-avviso {
+  color: var(--colore-relazioni);
+  font-size: var(--dim-piccolo);
+  margin-top: var(--spazio-xs);
+}
+
+.testo-attenzione {
+  color: var(--colore-economia);
+  font-size: var(--dim-piccolo);
+  margin-top: var(--spazio-xs);
+}
+
+.testo-positivo {
+  color: var(--colore-tecnica);
+  font-size: var(--dim-piccolo);
+  margin-top: var(--spazio-xs);
+}
+
+/* ============================================================
+   SEZIONE PERSONALE — sotto-navigazione
+   ============================================================ */
+
+.nav-sub-personale {
+  display: flex;
+  gap: var(--spazio-s);
+  flex-wrap: wrap;
+  margin-bottom: var(--spazio-l);
+  padding-bottom: var(--spazio-m);
+  border-bottom: 1px solid var(--bordo);
+}
+
+.btn-sub-personale.attivo {
+  border-color: var(--colore-persone);
+  color: var(--colore-persone);
+  background-color: #00091a;
+  font-weight: 700;
+}
+
+.titolo-pannello-personale {
+  font-size: var(--dim-intestazione);
+  color: var(--colore-persone);
+  margin-bottom: var(--spazio-m);
+}
+
+/* ============================================================
+   PILOTI — schede individuali
+   ============================================================ */
+
+.scheda-pilota {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+  border-left: 3px solid var(--colore-persone);
+}
+
+.intestazione-pilota {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--spazio-s);
+  margin-bottom: var(--spazio-xs);
+}
+
+.intestazione-pilota-destra {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-s);
+}
+
+.nome-pilota {
+  font-size: var(--dim-intestazione);
+  font-weight: 700;
+  color: var(--testo-principale);
+}
+
+.numero-pilota {
+  font-size: var(--dim-piccolo);
+  color: var(--colore-persone);
+  font-weight: 700;
+}
+
+.nazionalita-pilota {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  margin-bottom: var(--spazio-xs);
+}
+
+.badge-traiettoria {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid;
+}
+
+.badge-crescita { color: var(--colore-tecnica); border-color: var(--colore-tecnica); }
+.badge-stabile  { color: var(--testo-secondario); border-color: var(--bordo); }
+.badge-declino  { color: var(--colore-relazioni); border-color: var(--colore-relazioni); }
+
+/* Fedeltà */
+.riempimento-fedeltà {
+  height: 100%;
+  background-color: var(--colore-persone);
+  border-radius: inherit;
+  transition: width 0.3s ease;
+}
+
+/* Statistiche pilota qualitative */
+.card-stat-pilota {
+  margin-top: var(--spazio-s);
+}
+
+.riga-stat-pilota {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 3px 0;
+  border-bottom: 1px solid var(--bordo);
+  font-size: var(--dim-piccolo);
+}
+
+.nome-stat-pilota {
+  color: var(--testo-secondario);
+}
+
+.valore-stat-pilota {
+  font-weight: 700;
+}
+
+.stat-eccellente { color: var(--colore-tecnica); }
+.stat-ottimo     { color: var(--colore-persone); }
+.stat-buono      { color: var(--colore-economia); }
+.stat-sufficiente{ color: var(--testo-secondario); }
+.stat-debole     { color: var(--colore-relazioni); }
+
+/* ============================================================
+   STAFF — schede principali e minori
+   ============================================================ */
+
+.scheda-staff {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+}
+
+.intestazione-staff {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--spazio-s);
+  flex-wrap: wrap;
+  margin-bottom: var(--spazio-xs);
+}
+
+.nome-staff {
+  font-weight: 700;
+  color: var(--testo-principale);
+  font-size: var(--dim-corpo);
+}
+
+.ruolo-staff {
+  font-size: var(--dim-piccolo);
+  color: var(--colore-persone);
+  font-weight: 600;
+}
+
+.descrizione-ruolo-staff {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  font-style: italic;
+  margin-bottom: var(--spazio-s);
+}
+
+.lista-stat-staff {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px var(--spazio-m);
+  font-size: var(--dim-piccolo);
+  margin-top: var(--spazio-s);
+}
+
+.lista-stat-staff dt {
+  color: var(--testo-secondario);
+}
+
+.stat-staff {
+  font-weight: 700;
+  margin-left: 0;
+}
+
+.riga-staff-minore {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spazio-xs) 0;
+  border-bottom: 1px solid var(--bordo);
+}
+
+.nome-staff-minore {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-principale);
+}
+
+.ruolo-staff-minore {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+}
+
+.nota-staff-minore {
+  width: 100%;
+  font-size: 13px;
+  color: var(--testo-secondario);
+  margin-top: 2px;
+}
+
+.testo-successo {
+  color: var(--colore-tecnica);
+}
+
+/* ============================================================
+   ACADEMY — riserva e giovani talenti
+   ============================================================ */
+
+.badge-academy {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid var(--colore-persone);
+  color: var(--colore-persone);
+}
+
+.badge-categoria-academy {
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--colore-economia);
+  color: var(--colore-economia);
+}
+
+.scheda-talento-academy {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-top: var(--spazio-m);
+}
+
+/* ============================================================
+   MERCATO — stato e contratti
+   ============================================================ */
+
+.box-mercato-chiuso {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-l);
+}
+
+.riga-contratto-scadenza {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spazio-xs) 0;
+  border-bottom: 1px solid var(--bordo);
+  gap: var(--spazio-s);
+  flex-wrap: wrap;
+}
+
+.riga-offerta-ar1 {
+  display: flex;
+  align-items: center;
+  gap: var(--spazio-s);
+  padding: var(--spazio-s) 0;
+  border-bottom: 1px solid var(--bordo);
+  flex-wrap: wrap;
+}
+
+/* ============================================================
+   TECNICA — Infrastrutture
+   ============================================================ */
+
+.scheda-infrastruttura {
+  background-color: #001a0d;
+  border: 1px solid var(--colore-tecnica);
+  border-radius: var(--raggio);
+  padding: var(--spazio-m);
+  margin-top: var(--spazio-m);
+}
+
+.intestazione-infrastruttura {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spazio-s);
+}
+
+.nome-infrastruttura {
+  font-size: var(--dim-sezione);
+  font-weight: 700;
+  color: var(--colore-tecnica);
+}
+
+.badge-livello-infrastrutture {
+  font-size: var(--dim-piccolo);
+  letter-spacing: 2px;
+  padding: 2px var(--spazio-s);
+  border-radius: var(--raggio);
+  border: 1px solid var(--colore-tecnica);
+}
+
+.badge-livello-infrastrutture-1 { color: var(--testo-secondario); border-color: var(--testo-secondario); }
+.badge-livello-infrastrutture-2 { color: var(--colore-tecnica);    border-color: var(--colore-tecnica);    opacity: 0.6; }
+.badge-livello-infrastrutture-3 { color: var(--colore-tecnica);    border-color: var(--colore-tecnica);    opacity: 0.75; }
+.badge-livello-infrastrutture-4 { color: var(--colore-tecnica);    border-color: var(--colore-tecnica);    opacity: 0.9; }
+.badge-livello-infrastrutture-5 { color: var(--colore-tecnica);    border-color: var(--colore-tecnica); }
+
+.effetto-infrastruttura {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+  margin-bottom: var(--spazio-s);
+}
+
+.riempimento-infrastrutture {
+  background-color: var(--colore-tecnica);
+  opacity: 0.7;
+}
+
+.riga-upgrade-infrastruttura {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spazio-m);
+  flex-wrap: wrap;
+}
+
+.info-upgrade-infrastruttura {
+  font-size: var(--dim-piccolo);
+  color: var(--testo-secondario);
+}
+
+.btn-upgrade-infrastruttura {
+  min-height: var(--touch-min);
+  min-width: 44px;
+  padding: var(--spazio-xs) var(--spazio-m);
+  background-color: transparent;
+  border: 1px solid var(--colore-tecnica);
+  border-radius: var(--raggio);
+  color: var(--colore-tecnica);
+  font-size: var(--dim-piccolo);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-upgrade-infrastruttura:disabled {
+  border-color: var(--bordo);
+  color: var(--testo-secondario);
+  cursor: not-allowed;
+}
+
+/* ============================================================
+   ECONOMIA — sotto-navigazione
+   ============================================================ */
+
+.nav-sub-economia {
+  display: flex;
+  gap: var(--spazio-s);
+  flex-wrap: wrap;
+  margin-bottom: var(--spazio-l);
+  padding-bottom: var(--spazio-m);
+  border-bottom: 1px solid var(--bordo);
+}
+
+.btn-sub-economia.attivo {
+  border-color: var(--colore-economia);
+  color: var(--colore-economia);
+  background-color: #1a1400;
+}
+
+.titolo-pannello-economia {
+  color: var(--colore-economia);
+  font-size: var(--dim-sezione);
+  margin-bottom: var(--spazio-m);
+}
+
+/* ============================================================
+   RELAZIONI — sotto-navigazione
+   ============================================================ */
+
+.nav-sub-relazioni {
+  display: flex;
+  gap: var(--spazio-s);
+  flex-wrap: wrap;
+  margin-bottom: var(--spazio-l);
+  padding-bottom: var(--spazio-m);
+  border-bottom: 1px solid var(--bordo);
+}
+
+.btn-sub-relazioni.attivo {
+  border-color: var(--colore-relazioni);
+  color: var(--colore-relazioni);
+  background-color: #1a0000;
+}
+
+.titolo-pannello-relazioni {
+  color: var(--colore-relazioni);
+  font-size: var(--dim-sezione);
+  margin-bottom: var(--spazio-m);
+}
+
+/* ============================================================
+   PANORAMA — sotto-navigazione
+   ============================================================ */
+
+.nav-sub-panorama {
+  display: flex;
+  gap: var(--spazio-s);
+  flex-wrap: wrap;
+  margin-bottom: var(--spazio-l);
+  padding-bottom: var(--spazio-m);
+  border-bottom: 1px solid var(--bordo);
+}
+
+.btn-sub-panorama.attivo {
+  border-color: var(--colore-panorama);
+  color: var(--colore-panorama);
+  background-color: #111111;
+}
+
+.titolo-pannello-panorama {
+  color: var(--colore-panorama);
+  font-size: var(--dim-sezione);
+  margin-bottom: var(--spazio-m);
+}

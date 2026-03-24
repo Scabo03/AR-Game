@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -c /mnt/c/Users/scabi/Desktop/F1Manager/ui.js)",
+      "Bash(node -c /mnt/c/Users/scabi/Desktop/F1Manager/game-engine.js)",
+      "Bash(ls:*)",
+      "Bash(node -e \":*)",
+      "Bash(wc:*)",
+      "Bash(node -c game-engine.js)",
+      "Bash(node -c ui.js)",
+      "Bash(node -c data.js)",
+      "Bash(grep -v '^$')",
+      "Bash(grep:*)",
+      "Bash(for id:*)",
+      "Bash(do echo:*)",
+      "Bash(done)",
+      "Bash(__NEW_LINE_71c3921b8d802dcd__ echo:*)"
+    ]
+  }
+}

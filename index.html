@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="apple-mobile-web-app-title" content="AR1 Manager">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="Gestionale AR1 — Team Principal e Amministratore Delegato">
+
+  <title>AR1 Manager</title>
+
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- =========================================================
+       REGIONE NOTIFICHE LIVE (VoiceOver aria-live)
+  ========================================================== -->
+  <div
+    id="regione-notifiche"
+    role="status"
+    aria-live="polite"
+    aria-atomic="true"
+    class="sr-only"
+  ></div>
+
+  <!-- =========================================================
+       SCHERMATA INIZIALE
+  ========================================================== -->
+  <main id="schermata-iniziale" class="schermata attiva" aria-labelledby="titolo-iniziale">
+    <div class="contenitore-centrato">
+      <h1 id="titolo-iniziale" class="titolo-principale">AR1 Manager</h1>
+      <p class="sottotitolo">Gestionale AR1</p>
+      <nav aria-label="Avvio partita">
+        <ul class="lista-menu-principale">
+          <li>
+            <button
+              id="btn-nuova-partita"
+              class="btn-menu-principale"
+              aria-label="Nuova partita — avvia una nuova carriera da zero"
+            >Nuova partita</button>
+          </li>
+          <li>
+            <button
+              id="btn-continua"
+              class="btn-menu-principale"
+              aria-label="Continua partita — riprendi la partita salvata"
+              disabled
+            >Continua partita</button>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </main>
+
+  <!-- =========================================================
+       SCHERMATA DI GIOCO
+  ========================================================== -->
+  <div id="schermata-gioco" class="schermata" aria-hidden="true">
+
+    <!-- INTESTAZIONE STATUS -->
+    <header id="intestazione-gioco" role="banner">
+      <div class="status-bar">
+        <span id="status-categoria" aria-label="Categoria corrente"></span>
+        <span id="status-squadra" aria-label="Squadra corrente"></span>
+        <span id="status-stagione" aria-label="Stagione corrente"></span>
+        <span id="status-round" aria-label="Round corrente"></span>
+      </div>
+    </header>
+
+    <!-- NAVIGAZIONE PRINCIPALE -->
+    <nav id="menu-principale" aria-label="Menu principale di gioco">
+      <ul class="lista-menu-gioco" role="menubar">
+        <li role="none">
+          <button
+            role="menuitem"
+            class="voce-menu colore-operazioni"
+            data-sezione="operazioni"
+            aria-label="Operazioni — calendario, sessioni e strategia gomme"
+          >⏱ Operazioni</button>
+        </li>
+        <li role="none">
+          <button
+            role="menuitem"
+            class="voce-menu colore-persone"
+            data-sezione="persone"
+            aria-label="Personale — piloti, staff e academy"
+          >👤 Persone</button>
+        </li>
+        <li role="none" id="voce-tecnica-nav">
+          <button
+            role="menuitem"
+            class="voce-menu colore-tecnica"
+            data-sezione="tecnica"
+            aria-label="Tecnica — stato macchina e sviluppo"
+          >⚙️ Tecnica</button>
+        </li>
+        <li role="none" id="voce-economia-nav">
+          <button
+            role="menuitem"
+            class="voce-menu colore-economia"
+            data-sezione="economia"
+            aria-label="Management — budget, sponsor e prize money"
+          >📊 Management</button>
+        </li>
+        <li role="none" id="voce-relazioni-nav">
+          <button
+            role="menuitem"
+            class="voce-menu colore-relazioni"
+            data-sezione="relazioni"
+            aria-label="Relazioni — federazione, sponsor e media"
+          >🤝 Relazioni</button>
+        </li>
+        <li role="none">
+          <button
+            role="menuitem"
+            class="voce-menu colore-panorama"
+            data-sezione="panorama"
+            aria-label="Panoramica — classifiche, reputazione, storico e regolamenti"
+          >🏆 Panoramica</button>
+        </li>
+      </ul>
+    </nav>
+
+    <!-- AREA CONTENUTO PRINCIPALE -->
+    <main id="area-contenuto" role="main" aria-label="Contenuto sezione">
+
+      <!-- SEZIONE OPERAZIONI -->
+      <section
+        id="sezione-operazioni"
+        class="sezione-gioco nascosta"
+        aria-labelledby="titolo-operazioni"
+      >
+        <h2 id="titolo-operazioni" class="titolo-sezione colore-operazioni">Operazioni</h2>
+
+        <div id="pannello-prossimo-evento" role="region" aria-labelledby="titolo-prossimo-evento">
+          <h3 id="titolo-prossimo-evento">Prossimo evento</h3>
+          <div id="contenuto-prossimo-evento" aria-live="polite"></div>
+        </div>
+
+        <div id="pannello-calendario" role="region" aria-labelledby="titolo-calendario">
+          <h3 id="titolo-calendario">Calendario stagionale</h3>
+          <div id="contenuto-calendario"></div>
+        </div>
+
+        <div id="pannello-sviluppo-ar2" role="region" aria-labelledby="titolo-sviluppo-ar2" class="nascosta">
+          <h3 id="titolo-sviluppo-ar2" class="titolo-pannello-tecnica">Sviluppo tecnico</h3>
+          <div id="contenuto-sviluppo-ar2"></div>
+        </div>
+
+        <div id="pannello-storico-risultati" role="region" aria-labelledby="titolo-storico-risultati" class="nascosta">
+          <h3 id="titolo-storico-risultati">Storico risultati</h3>
+          <div id="contenuto-storico-risultati"></div>
+        </div>
+
+        <div id="pannello-strategia-gomme" role="region" aria-labelledby="titolo-strategia-gomme" class="nascosta">
+          <h3 id="titolo-strategia-gomme">Strategia gomme — weekend corrente</h3>
+          <div id="contenuto-strategia-gomme"></div>
+        </div>
+
+        <div id="pannello-logistica" role="region" aria-labelledby="titolo-logistica" class="nascosta">
+          <h3 id="titolo-logistica">Logistica e spostamenti</h3>
+          <div id="contenuto-logistica"></div>
+        </div>
+      </section>
+
+      <!-- SEZIONE PERSONALE -->
+      <section
+        id="sezione-persone"
+        class="sezione-gioco nascosta"
+        aria-labelledby="titolo-persone"
+      >
+        <h2 id="titolo-persone" class="titolo-sezione colore-persone">Personale</h2>
+
+        <nav id="nav-sub-personale" class="nav-sub-personale" aria-label="Sottosezioni Personale">
+          <button class="btn-sub-nav btn-sub-personale attivo" data-pannello-personale="piloti"
+            aria-label="Piloti — schede individuali e contratti">Piloti</button>
+          <button class="btn-sub-nav btn-sub-personale" data-pannello-personale="staff"
+            aria-label="Staff — figure tecniche e operative">Staff</button>
+          <button class="btn-sub-nav btn-sub-personale" data-pannello-personale="academy"
+            aria-label="Academy — pilota di riserva e giovani talenti">Academy</button>
+          <button class="btn-sub-nav btn-sub-personale" data-pannello-personale="mercato"
+            aria-label="Mercato — trattative e negoziazioni">Mercato</button>
+        </nav>
+
+        <div id="pannello-piloti" role="region" aria-labelledby="titolo-piloti">
+          <h3 id="titolo-piloti" class="titolo-pannello-personale">Piloti</h3>
+          <div id="contenuto-piloti"></div>
+        </div>
+
+        <div id="pannello-staff" role="region" aria-labelledby="titolo-staff" class="nascosta">
+          <h3 id="titolo-staff" class="titolo-pannello-personale">Staff</h3>
+          <div id="contenuto-staff"></div>
+        </div>
+
+        <div id="pannello-academy" role="region" aria-labelledby="titolo-academy" class="nascosta">
+          <h3 id="titolo-academy" class="titolo-pannello-personale">Academy</h3>
+          <div id="contenuto-academy"></div>
+        </div>
+
+        <div id="pannello-mercato" role="region" aria-labelledby="titolo-mercato" class="nascosta">
+          <h3 id="titolo-mercato" class="titolo-pannello-personale">Mercato</h3>
+          <div id="contenuto-mercato"></div>
+        </div>
+
+      </section>
+
+      <!-- SEZIONE TECNICA (solo AR1) -->
+      <section
+        id="sezione-tecnica"
+        class="sezione-gioco nascosta"
+        aria-labelledby="titolo-tecnica"
+      >
+        <h2 id="titolo-tecnica" class="titolo-sezione colore-tecnica">Tecnica</h2>
+
+        <nav id="nav-sub-tecnica" class="nav-sub-tecnica" aria-label="Sottosezioni Tecnica">
+          <button class="btn-sub-nav btn-sub-tecnica attivo" data-pannello-tecnica="macchina"
+            aria-label="Macchina — performance stimata e aree di sviluppo">Macchina</button>
+          <button class="btn-sub-nav btn-sub-tecnica" data-pannello-tecnica="upgrade"
+            aria-label="Upgrade — piano sviluppo stagione corrente">Upgrade</button>
+          <button class="btn-sub-nav btn-sub-tecnica" data-pannello-tecnica="sviluppo"
+            aria-label="Sviluppo — allocazione CFD e progetto stagione successiva">Sviluppo</button>
+          <button class="btn-sub-nav btn-sub-tecnica" data-pannello-tecnica="power-unit"
+            aria-label="Power Unit — fornitore motore e token di sviluppo">Power Unit</button>
+          <button class="btn-sub-nav btn-sub-tecnica" data-pannello-tecnica="archivio"
+            aria-label="Archivio dati — prove libere e analisi Data Analyst">Archivio dati</button>
+          <button class="btn-sub-nav btn-sub-tecnica" data-pannello-tecnica="infrastrutture"
+            aria-label="Infrastrutture — impianti produttivi e facility del team">Infrastrutture</button>
+        </nav>
+
+        <div id="pannello-macchina" role="region" aria-labelledby="titolo-macchina">
+          <h3 id="titolo-macchina" class="titolo-pannello-tecnica">Macchina</h3>
+          <div id="contenuto-macchina"></div>
+        </div>
+
+        <div id="pannello-upgrade" role="region" aria-labelledby="titolo-upgrade" class="nascosta">
+          <h3 id="titolo-upgrade" class="titolo-pannello-tecnica">Piano upgrade</h3>
+          <div id="contenuto-upgrade"></div>
+        </div>
+
+        <div id="pannello-sviluppo" role="region" aria-labelledby="titolo-sviluppo" class="nascosta">
+          <h3 id="titolo-sviluppo" class="titolo-pannello-tecnica">Sviluppo e CFD</h3>
+          <div id="contenuto-sviluppo"></div>
+        </div>
+
+        <div id="pannello-power-unit" role="region" aria-labelledby="titolo-power-unit" class="nascosta">
+          <h3 id="titolo-power-unit" class="titolo-pannello-tecnica">Power Unit</h3>
+          <div id="contenuto-power-unit"></div>
+        </div>
+
+        <div id="pannello-archivio" role="region" aria-labelledby="titolo-archivio" class="nascosta">
+          <h3 id="titolo-archivio" class="titolo-pannello-tecnica">Archivio dati FP</h3>
+          <div id="contenuto-archivio"></div>
+        </div>
+
+        <div id="pannello-infrastrutture" role="region" aria-labelledby="titolo-infrastrutture" class="nascosta">
+          <h3 id="titolo-infrastrutture" class="titolo-pannello-tecnica">Infrastrutture</h3>
+          <div id="contenuto-infrastrutture"></div>
+        </div>
+
+      </section>
+
+      <!-- SEZIONE ECONOMIA -->
+      <section
+        id="sezione-economia"
+        class="sezione-gioco nascosta"
+        aria-labelledby="titolo-economia"
+      >
+        <h2 id="titolo-economia" class="titolo-sezione colore-economia">Management</h2>
+
+        <nav id="nav-sub-economia" class="nav-sub-economia" aria-label="Sottosezioni Management">
+          <button class="btn-sub-nav btn-sub-economia attivo" data-pannello-economia="budget"
+            aria-label="Budget — disponibilità finanziaria corrente" aria-pressed="true">Budget</button>
+          <button class="btn-sub-nav btn-sub-economia" data-pannello-economia="budget-cap"
+            aria-label="Budget cap — limite regolamentare e utilizzo" aria-pressed="false">Budget cap</button>
+          <button class="btn-sub-nav btn-sub-economia" data-pannello-economia="sponsor"
+            aria-label="Sponsor — contratti attivi e performance" aria-pressed="false">Sponsor</button>
+          <button class="btn-sub-nav btn-sub-economia" data-pannello-economia="prize-money"
+            aria-label="Prize money — erogazioni Federazione e classifica" aria-pressed="false">Prize money</button>
+          <button class="btn-sub-nav btn-sub-economia" data-pannello-economia="bilancio"
+            aria-label="Bilancio — consuntivo stagionale" aria-pressed="false">Bilancio</button>
+        </nav>
+
+        <div id="pannello-eco-budget" role="region" aria-labelledby="titolo-eco-budget">
+          <h3 id="titolo-eco-budget" class="titolo-pannello-economia">Budget corrente</h3>
+          <div id="contenuto-eco-budget"></div>
+        </div>
+        <div id="pannello-eco-budget-cap" role="region" aria-labelledby="titolo-eco-budget-cap" class="nascosta">
+          <h3 id="titolo-eco-budget-cap" class="titolo-pannello-economia">Budget cap</h3>
+          <div id="contenuto-eco-budget-cap"></div>
+        </div>
+        <div id="pannello-eco-sponsor" role="region" aria-labelledby="titolo-eco-sponsor" class="nascosta">
+          <h3 id="titolo-eco-sponsor" class="titolo-pannello-economia">Sponsor</h3>
+          <div id="contenuto-eco-sponsor"></div>
+        </div>
+        <div id="pannello-eco-prize-money" role="region" aria-labelledby="titolo-eco-prize-money" class="nascosta">
+          <h3 id="titolo-eco-prize-money" class="titolo-pannello-economia">Prize money</h3>
+          <div id="contenuto-eco-prize-money"></div>
+        </div>
+        <div id="pannello-eco-bilancio" role="region" aria-labelledby="titolo-eco-bilancio" class="nascosta">
+          <h3 id="titolo-eco-bilancio" class="titolo-pannello-economia">Bilancio stagionale</h3>
+          <div id="contenuto-eco-bilancio"></div>
+        </div>
+
+      </section>
+
+      <!-- SEZIONE RELAZIONI (solo AR1) -->
+      <section
+        id="sezione-relazioni"
+        class="sezione-gioco nascosta"
+        aria-labelledby="titolo-relazioni"
+      >
+        <h2 id="titolo-relazioni" class="titolo-sezione colore-relazioni">Relazioni</h2>
+
+        <nav id="nav-sub-relazioni" class="nav-sub-relazioni" aria-label="Sottosezioni Relazioni">
+          <button class="btn-sub-nav btn-sub-relazioni attivo" data-pannello-relazioni="federazione"
+            aria-label="Federazione — era regolamentare e negoziazioni" aria-pressed="true">Federazione</button>
+          <button class="btn-sub-nav btn-sub-relazioni" data-pannello-relazioni="sponsor-rel"
+            aria-label="Sponsor — gestione rapporti e hospitality" aria-pressed="false">Sponsor</button>
+          <button class="btn-sub-nav btn-sub-relazioni" data-pannello-relazioni="piloti-rel"
+            aria-label="Piloti — conversazioni e gestione rapporti" aria-pressed="false">Piloti</button>
+          <button class="btn-sub-nav btn-sub-relazioni" data-pannello-relazioni="staff-rel"
+            aria-label="Staff — gestione rapporti chiave" aria-pressed="false">Staff</button>
+          <button class="btn-sub-nav btn-sub-relazioni" data-pannello-relazioni="media"
+            aria-label="Media — social media e reputazione mediatica" aria-pressed="false">Media</button>
+        </nav>
+
+        <div id="pannello-rel-federazione" role="region" aria-labelledby="titolo-rel-federazione">
+          <h3 id="titolo-rel-federazione" class="titolo-pannello-relazioni">Federazione</h3>
+          <div id="contenuto-rel-federazione"></div>
+        </div>
+        <div id="pannello-rel-sponsor-rel" role="region" aria-labelledby="titolo-rel-sponsor-rel" class="nascosta">
+          <h3 id="titolo-rel-sponsor-rel" class="titolo-pannello-relazioni">Sponsor</h3>
+          <div id="contenuto-rel-sponsor"></div>
+        </div>
+        <div id="pannello-rel-piloti-rel" role="region" aria-labelledby="titolo-rel-piloti-rel" class="nascosta">
+          <h3 id="titolo-rel-piloti-rel" class="titolo-pannello-relazioni">Piloti</h3>
+          <div id="contenuto-rel-piloti"></div>
+        </div>
+        <div id="pannello-rel-staff-rel" role="region" aria-labelledby="titolo-rel-staff-rel" class="nascosta">
+          <h3 id="titolo-rel-staff-rel" class="titolo-pannello-relazioni">Staff</h3>
+          <div id="contenuto-rel-staff"></div>
+        </div>
+        <div id="pannello-rel-media" role="region" aria-labelledby="titolo-rel-media" class="nascosta">
+          <h3 id="titolo-rel-media" class="titolo-pannello-relazioni">Media</h3>
+          <div id="contenuto-rel-media"></div>
+        </div>
+
+      </section>
+
+      <!-- SEZIONE PANORAMA -->
+      <section
+        id="sezione-panorama"
+        class="sezione-gioco nascosta"
+        aria-labelledby="titolo-panorama"
+      >
+        <h2 id="titolo-panorama" class="titolo-sezione colore-panorama">Panoramica</h2>
+
+        <nav id="nav-sub-panorama" class="nav-sub-panorama" aria-label="Sottosezioni Panoramica">
+          <button class="btn-sub-nav btn-sub-panorama attivo" data-pannello-panorama="costruttori"
+            aria-label="Classifica costruttori — stagione corrente" aria-pressed="true">Costruttori</button>
+          <button class="btn-sub-nav btn-sub-panorama" data-pannello-panorama="piloti"
+            aria-label="Classifica piloti — stagione corrente" aria-pressed="false">Piloti</button>
+          <button class="btn-sub-nav btn-sub-panorama" data-pannello-panorama="reputazione"
+            aria-label="Reputazione — dettaglio per sottotipo e trend" aria-pressed="false">Reputazione</button>
+          <button class="btn-sub-nav btn-sub-panorama" data-pannello-panorama="storico"
+            aria-label="Storico — stagioni precedenti per categoria" aria-pressed="false">Storico</button>
+          <button class="btn-sub-nav btn-sub-panorama" data-pannello-panorama="era-regolamentare"
+            aria-label="Era regolamentare — dettagli del regolamento tecnico vigente" aria-pressed="false">Era</button>
+          <button class="btn-sub-nav btn-sub-panorama" data-pannello-panorama="rendimenti"
+            aria-label="Rendimenti piloti — overperformer e underperformer stagione corrente" aria-pressed="false">Rendimenti</button>
+        </nav>
+
+        <div id="pannello-pan-costruttori" role="region" aria-labelledby="titolo-pan-costruttori">
+          <h3 id="titolo-pan-costruttori" class="titolo-pannello-panorama">Classifica costruttori</h3>
+          <div id="contenuto-pan-costruttori"></div>
+        </div>
+        <div id="pannello-pan-piloti" role="region" aria-labelledby="titolo-pan-piloti" class="nascosta">
+          <h3 id="titolo-pan-piloti" class="titolo-pannello-panorama">Classifica piloti</h3>
+          <div id="contenuto-pan-piloti"></div>
+        </div>
+        <div id="pannello-pan-reputazione" role="region" aria-labelledby="titolo-pan-reputazione" class="nascosta">
+          <h3 id="titolo-pan-reputazione" class="titolo-pannello-panorama">Reputazione squadra</h3>
+          <div id="contenuto-pan-reputazione"></div>
+        </div>
+        <div id="pannello-pan-storico" role="region" aria-labelledby="titolo-pan-storico" class="nascosta">
+          <h3 id="titolo-pan-storico" class="titolo-pannello-panorama">Storico stagioni</h3>
+          <div id="contenuto-pan-storico"></div>
+        </div>
+        <div id="pannello-pan-era-regolamentare" role="region" aria-labelledby="titolo-pan-era-regolamentare" class="nascosta">
+          <h3 id="titolo-pan-era-regolamentare" class="titolo-pannello-panorama">Era regolamentare</h3>
+          <div id="contenuto-pan-era-regolamentare"></div>
+        </div>
+        <div id="pannello-pan-rendimenti" role="region" aria-labelledby="titolo-pan-rendimenti" class="nascosta">
+          <h3 id="titolo-pan-rendimenti" class="titolo-pannello-panorama">Rendimenti piloti</h3>
+          <div id="contenuto-pan-rendimenti"></div>
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- =========================================================
+       PANNELLO SESSIONE DI GIOCO (Briefing, FP, Qualifica, Gara)
+  ========================================================== -->
+  <div
+    id="pannello-sessione"
+    class="pannello-overlay nascosta"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="titolo-sessione"
+    aria-describedby="descrizione-sessione"
+  >
+    <div class="contenitore-sessione">
+      <h2 id="titolo-sessione"></h2>
+      <p id="descrizione-sessione" class="descrizione-sessione"></p>
+
+      <!-- Meteo sessione -->
+      <div
+        id="box-meteo"
+        role="region"
+        aria-label="Condizioni meteo"
+        aria-live="polite"
+      >
+        <h3 class="titolo-box-meteo">Condizioni meteo</h3>
+        <dl id="dati-meteo" class="lista-dati"></dl>
+      </div>
+
+      <!-- Dati gara live -->
+      <div
+        id="box-gara-live"
+        role="region"
+        aria-label="Dati gara in tempo reale"
+        aria-live="polite"
+        class="nascosta"
+      >
+        <h3>Situazione gara</h3>
+        <dl id="dati-gara-live" class="lista-dati"></dl>
+        <div id="eventi-gara" aria-live="polite" aria-atomic="false"></div>
+      </div>
+
+      <!-- Decisioni disponibili -->
+      <div id="area-decisioni" role="region" aria-labelledby="titolo-decisioni">
+        <h3 id="titolo-decisioni">Decisioni disponibili</h3>
+        <div id="contenuto-decisioni"></div>
+      </div>
+
+      <!-- Azioni sessione -->
+      <div id="azioni-sessione" class="gruppo-azioni">
+        <button
+          id="btn-simula-sessione"
+          class="btn-azione"
+          aria-label="Simula automaticamente la sessione"
+        >Simula sessione</button>
+        <button
+          id="btn-avanza-fase"
+          class="btn-azione btn-secondario"
+          aria-label="Avanza alla fase successiva"
+        >Avanza</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       DIALOGO CONFERMA GENERICA
+  ========================================================== -->
+  <div
+    id="dialogo-conferma"
+    class="pannello-overlay nascosta"
+    role="alertdialog"
+    aria-modal="true"
+    aria-labelledby="titolo-dialogo"
+    aria-describedby="testo-dialogo"
+  >
+    <div class="contenitore-dialogo">
+      <h2 id="titolo-dialogo"></h2>
+      <p id="testo-dialogo"></p>
+      <div class="gruppo-azioni">
+        <button id="btn-conferma-si" class="btn-azione">Conferma</button>
+        <button id="btn-conferma-no" class="btn-azione btn-secondario">Annulla</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       SCHERMATA INTRO — presentazione squadra a inizio partita
+  ========================================================== -->
+  <div
+    id="schermata-intro"
+    class="pannello-overlay nascosta"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="titolo-intro"
+  >
+    <div class="contenitore-intro">
+      <p class="etichetta-intro" aria-hidden="true">Team Principal — Incarico ricevuto</p>
+      <h1 id="titolo-intro" class="titolo-intro"></h1>
+      <div id="contenuto-intro" aria-live="polite"></div>
+      <div class="gruppo-azioni" style="margin-top: var(--spazio-xl);">
+        <button
+          id="btn-inizia-stagione"
+          class="btn-azione"
+          aria-label="Inizia la stagione — accedi alla prima sessione"
+        >Inizia la stagione</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       TUTORIAL — riquadro informativo prima sessione
+  ========================================================== -->
+  <div
+    id="tutorial-overlay"
+    class="tutorial-overlay nascosta"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="titolo-tutorial"
+    aria-describedby="testo-tutorial"
+  >
+    <div class="contenitore-tutorial">
+      <p class="etichetta-tutorial" aria-hidden="true">Nuova meccanica</p>
+      <h2 id="titolo-tutorial"></h2>
+      <p id="testo-tutorial"></p>
+      <div class="gruppo-azioni" style="margin-top: var(--spazio-l);">
+        <button
+          id="btn-chiudi-tutorial"
+          class="btn-azione"
+          aria-label="Capito — chiudi e procedi"
+        >Capito — procedi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       INTER-GARA AR3 — classifica e piloti tra un round e l'altro
+  ========================================================== -->
+  <div
+    id="pannello-intergara-ar3"
+    class="pannello-overlay nascosta"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="titolo-intergara"
+  >
+    <div class="contenitore-sessione">
+      <h2 id="titolo-intergara"></h2>
+      <p id="sottotitolo-intergara" class="descrizione-sessione"></p>
+      <div id="contenuto-intergara-classifica" role="region" aria-labelledby="titolo-intergara-classifica">
+        <h3 id="titolo-intergara-classifica">Classifica costruttori</h3>
+        <div id="lista-intergara-costruttori"></div>
+      </div>
+      <div id="contenuto-intergara-piloti" role="region" aria-labelledby="titolo-intergara-piloti" style="margin-top: var(--spazio-l);">
+        <h3 id="titolo-intergara-piloti">I tuoi piloti</h3>
+        <div id="lista-intergara-piloti"></div>
+      </div>
+      <div class="gruppo-azioni" style="margin-top: var(--spazio-xl);">
+        <button
+          id="btn-avanza-intergara"
+          class="btn-azione"
+          aria-label="Avanza al prossimo round"
+        >Avanza al prossimo round →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       FINE STAGIONE — risultato e promozione
+  ========================================================== -->
+  <div
+    id="pannello-fine-stagione"
+    class="pannello-overlay nascosta"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="titolo-fine-stagione"
+  >
+    <div class="contenitore-sessione">
+      <h2 id="titolo-fine-stagione"></h2>
+      <div id="contenuto-fine-stagione" aria-live="polite"></div>
+      <div class="gruppo-azioni" style="margin-top: var(--spazio-xl);">
+        <button
+          id="btn-continua-fine-stagione"
+          class="btn-azione"
+          aria-label="Continua alla stagione successiva"
+        >Continua</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       PAUSA INVERNALE — hub inter-stagionale AR1
+  ========================================================== -->
+  <div
+    id="pannello-pausa-invernale"
+    class="pannello-overlay nascosta"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="titolo-pausa-invernale"
+  >
+    <div class="contenitore-sessione">
+      <h2 id="titolo-pausa-invernale"></h2>
+
+      <nav id="nav-capitoli-pausa" aria-label="Capitoli pausa invernale" class="nav-pannello">
+        <button id="cap-btn-consuntivo" class="btn-pannello" aria-pressed="false" aria-label="Capitolo Consuntivo">Consuntivo</button>
+        <button id="cap-btn-concept"    class="btn-pannello" aria-pressed="false" aria-label="Capitolo Concept macchina, obbligatorio">Concept ★</button>
+        <button id="cap-btn-sviluppo"   class="btn-pannello" aria-pressed="false" aria-label="Capitolo Sviluppo e CFD">Sviluppo</button>
+        <button id="cap-btn-budget"     class="btn-pannello" aria-pressed="false" aria-label="Capitolo Budget">Budget</button>
+        <button id="cap-btn-piloti"     class="btn-pannello" aria-pressed="false" aria-label="Capitolo Mercato piloti, obbligatorio">Piloti ★</button>
+        <button id="cap-btn-staff"      class="btn-pannello" aria-pressed="false" aria-label="Capitolo Mercato staff">Staff</button>
+        <button id="cap-btn-test"       class="btn-pannello" aria-pressed="false" aria-label="Capitolo Test pre-stagionali">Test</button>
+        <button id="cap-btn-riunioni"   class="btn-pannello" aria-pressed="false" aria-label="Capitolo Riunioni pre-stagionali con lo staff">Riunioni</button>
+      </nav>
+
+      <div id="contenuto-pausa-invernale" aria-live="polite"></div>
+
+      <div class="gruppo-azioni" style="margin-top: var(--spazio-xl);">
+        <button
+          id="btn-avvia-stagione"
+          class="btn-azione"
+          disabled
+          aria-disabled="true"
+          aria-label="Avvia nuova stagione — completa prima i capitoli obbligatori"
+        >Avvia stagione</button>
+        <p id="nota-avvia-stagione" class="card-etichetta" aria-live="polite" style="margin-top: var(--spazio-s);"></p>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       WIDGET METEO — fisso durante qualifica e gara AR1
+  ========================================================== -->
+  <aside
+    id="widget-meteo"
+    class="widget-meteo nascosta"
+    role="complementary"
+    aria-label="Condizioni meteo in tempo reale"
+    aria-live="polite"
+  >
+    <p class="widget-meteo-titolo">Meteo pista</p>
+    <p id="widget-temp" class="widget-meteo-voce"></p>
+    <p id="widget-cond" class="widget-meteo-voce"></p>
+    <p id="widget-vento" class="widget-meteo-voce"></p>
+  </aside>
+
+  <!-- =========================================================
+       RIUNIONE INFORMATIVA AR1 — briefing multi-schermata
+       Mostrata al primo ingresso in AR1
+  ========================================================== -->
+  <div
+    id="pannello-riunione-ar1"
+    class="pannello-overlay nascosta"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="titolo-riunione-ar1"
+  >
+    <div class="contenitore-sessione">
+      <p class="etichetta-intro" aria-hidden="true">AR1 — Riunione informativa pre-stagionale</p>
+      <h2 id="titolo-riunione-ar1"></h2>
+      <div id="contenuto-riunione-ar1" aria-live="polite"></div>
+      <div class="gruppo-azioni" style="margin-top: var(--spazio-xl);">
+        <button
+          id="btn-avanza-riunione"
+          class="btn-azione"
+          aria-label="Avanza alla schermata successiva"
+        >Avanti</button>
+        <button
+          id="btn-fine-riunione"
+          class="btn-azione nascosta"
+          aria-label="Concludi la riunione e accedi al primo weekend"
+        >Inizia la stagione →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       INTER-GARA AR1 — tra un round e il successivo
+  ========================================================== -->
+  <div
+    id="pannello-intergara-ar1"
+    class="pannello-overlay nascosta"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="titolo-intergara-ar1"
+  >
+    <div class="contenitore-sessione">
+      <h2 id="titolo-intergara-ar1"></h2>
+      <p id="sottotitolo-intergara-ar1" class="descrizione-sessione"></p>
+      <div id="contenuto-intergara-ar1" aria-live="polite"></div>
+      <div class="gruppo-azioni" style="margin-top: var(--spazio-xl);">
+        <button
+          id="btn-avanza-intergara-ar1"
+          class="btn-azione"
+          aria-label="Avanza al prossimo round"
+        >Avanza al prossimo round →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       QUALIFICA AR1 — interfaccia Q1/Q2/Q3 a checkpoint
+  ========================================================== -->
+  <div
+    id="pannello-qualifica-ar1"
+    class="pannello-overlay nascosta"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="titolo-qualifica-ar1"
+  >
+    <div class="contenitore-sessione">
+      <h2 id="titolo-qualifica-ar1"></h2>
+      <p id="desc-qualifica-ar1" class="descrizione-sessione"></p>
+      <div id="segmento-qualifica-ar1" class="etichetta-segmento" aria-live="polite"></div>
+      <div id="contenuto-qualifica-ar1" aria-live="polite"></div>
+      <div class="gruppo-azioni" style="margin-top: var(--spazio-xl);">
+        <button
+          id="btn-checkpoint-qualifica"
+          class="btn-azione"
+          aria-label="Simula e avanza al prossimo checkpoint"
+        >Avanza checkpoint →</button>
+        <button
+          id="btn-fine-qualifica"
+          class="btn-azione nascosta"
+          aria-label="Chiudi le qualifiche e torna alle operazioni"
+        >Chiudi qualifiche</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================
+       GARA AR1 — interfaccia a checkpoint con widget meteo
+  ========================================================== -->
+  <div
+    id="pannello-gara-ar1"
+    class="pannello-overlay nascosta"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="titolo-gara-ar1"
+  >
+    <div class="contenitore-sessione">
+      <h2 id="titolo-gara-ar1"></h2>
+      <p id="desc-gara-ar1" class="descrizione-sessione"></p>
+      <div id="stato-gara-ar1" class="stato-gara-live" aria-live="polite"></div>
+      <div id="contenuto-gara-ar1" aria-live="polite"></div>
+      <div id="eventi-gara-ar1" class="log-eventi-gara" aria-live="polite" aria-atomic="false"></div>
+      <div class="gruppo-azioni" style="margin-top: var(--spazio-xl);">
+        <button
+          id="btn-checkpoint-gara"
+          class="btn-azione"
+          aria-label="Conferma decisioni e avanza al prossimo checkpoint"
+        >Conferma e avanza →</button>
+        <button
+          id="btn-fine-gara"
+          class="btn-azione nascosta"
+          aria-label="Chiudi la gara e vai al post-gara"
+        >Vai al post-gara →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script -->
+  <script src="data.js" defer></script>
+  <script src="game-engine.js" defer></script>
+  <script src="audio.js" defer></script>
+  <script src="ui.js" defer></script>
+</body>
+</html>

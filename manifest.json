@@ -1,0 +1,27 @@
+{
+  "name": "AR1 Manager",
+  "short_name": "AR1 Manager",
+  "description": "Gestionale AR1 — Team Principal e Amministratore Delegato",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "lang": "it",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["games", "sports"],
+  "screenshots": []
+}
