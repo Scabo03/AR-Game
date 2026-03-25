@@ -227,14 +227,24 @@ body {
 #menu-principale {
   background-color: var(--sfondo-elemento);
   border-bottom: 1px solid var(--bordo);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
+  /* Nessun overflow sul wrapper: evita che Safari iOS crei un native scroll-view
+     che estende l'area touch oltre i bordi visivi, interferendo con VoiceOver. */
 }
 
 .lista-menu-gioco {
   list-style: none;
   display: flex;
   min-width: max-content;
+  /* Lo scroll orizzontale è sul contenuto interno, non sul wrapper nav. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Nasconde la scrollbar visiva su tutti i browser */
+  scrollbar-width: none;       /* Firefox */
+  -ms-overflow-style: none;    /* IE / Edge legacy */
+}
+
+.lista-menu-gioco::-webkit-scrollbar {
+  display: none; /* Chrome / Safari */
 }
 
 .voce-menu {

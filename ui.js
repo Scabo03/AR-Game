@@ -7,6 +7,21 @@
 'use strict';
 
 /* ============================================================
+   POLYFILL — replaceChildren (Safari < 14 / iOS < 14)
+   replaceChildren() non è disponibile su Safari 13 e precedenti.
+   Il polyfill riproduce il comportamento standard:
+   chiamata senza argomenti = rimuove tutti i figli.
+   ============================================================ */
+if (typeof Element !== 'undefined' && !Element.prototype.replaceChildren) {
+  Element.prototype.replaceChildren = function (...nuoviNodi) {
+    while (this.firstChild) this.removeChild(this.firstChild);
+    nuoviNodi.forEach(n => {
+      this.appendChild(typeof n === 'string' ? document.createTextNode(n) : n);
+    });
+  };
+}
+
+/* ============================================================
    UTILITY DI ACCESSO AL DOM
    ============================================================ */
 
@@ -5058,7 +5073,7 @@ const _SLIDES_RIUNIONE_AR1 = [
     titolo: 'I tuoi piloti e lo staff',
     contenuto: [
       'I piloti hanno statistiche proprie che influenzano qualifica, gara e bagnato. Il loro umore varia in base ai risultati e alle interazioni.',
-      'Lo staff tecnico — dal Capo Ingegnere al Data Analyst — influenza ogni aspetto della competizione. Gestisci i rapporti nella sezione Persone.'
+      'Lo staff tecnico — dal Capo Ingegnere al Data Analyst — influenza ogni aspetto della competizione. Gestisci i rapporti nella sezione Personale.'
     ]
   }
 ];

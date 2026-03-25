@@ -119,7 +119,7 @@ const TUTORIAL_AR3 = {
   },
   'sezione-economia': {
     titolo: 'Il budget in AR3',
-    testo: 'In AR3 il budget è limitato e gestito dalla squadra. Le entrate principali arrivano dal prize money di fine stagione, proporzionale alla classifica costruttori. Tieni d\'occhio la sezione Economia per verificare la situazione finanziaria.'
+    testo: 'In AR3 il budget è limitato e gestito dalla squadra. Le entrate principali arrivano dal prize money di fine stagione, proporzionale alla classifica costruttori. Tieni d\'occhio la sezione Management per verificare la situazione finanziaria.'
   },
   'sezione-persone': {
     titolo: 'I piloti e lo staff',

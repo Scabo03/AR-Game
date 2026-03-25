@@ -3,7 +3,7 @@
    Gestisce cache offline e aggiornamenti PWA
    ============================================================ */
 
-const VERSIONE_CACHE = 'ar1manager-v4';
+const VERSIONE_CACHE = 'ar1manager-v6';
 const RISORSE_DA_CACHARE = [
   './index.html',
   './style.css',
