@@ -421,15 +421,28 @@
       <h2 id="titolo-sessione"></h2>
       <p id="descrizione-sessione" class="descrizione-sessione"></p>
 
+      <!-- Azioni sessione -->
+      <div id="azioni-sessione" class="gruppo-azioni">
+        <button
+          id="btn-simula-sessione"
+          class="btn-azione"
+          aria-label="Partecipa attivamente alla sessione con le scelte effettuate"
+        >Partecipa</button>
+        <button
+          id="btn-avanza-fase"
+          class="btn-azione btn-secondario"
+          aria-label="Simula automaticamente la sessione con impostazioni predefinite"
+        >Simula</button>
+      </div>
+
       <!-- Meteo sessione -->
       <div
         id="box-meteo"
         role="region"
         aria-label="Condizioni meteo"
-        aria-live="polite"
       >
         <h3 class="titolo-box-meteo">Condizioni meteo</h3>
-        <dl id="dati-meteo" class="lista-dati"></dl>
+        <dl id="dati-meteo" class="lista-dati" role="group" aria-label="Condizioni meteo"></dl>
       </div>
 
       <!-- Dati gara live -->
@@ -449,20 +462,6 @@
       <div id="area-decisioni" role="region" aria-labelledby="titolo-decisioni">
         <h3 id="titolo-decisioni">Decisioni disponibili</h3>
         <div id="contenuto-decisioni"></div>
-      </div>
-
-      <!-- Azioni sessione -->
-      <div id="azioni-sessione" class="gruppo-azioni">
-        <button
-          id="btn-simula-sessione"
-          class="btn-azione"
-          aria-label="Partecipa attivamente alla sessione con le scelte effettuate"
-        >Partecipa</button>
-        <button
-          id="btn-avanza-fase"
-          class="btn-azione btn-secondario"
-          aria-label="Simula automaticamente la sessione con impostazioni predefinite"
-        >Simula</button>
       </div>
     </div>
   </div>
@@ -640,10 +639,15 @@
     aria-label="Condizioni meteo in tempo reale"
     aria-live="polite"
   >
-    <p class="widget-meteo-titolo">Meteo pista</p>
-    <p id="widget-temp" class="widget-meteo-voce"></p>
-    <p id="widget-cond" class="widget-meteo-voce"></p>
-    <p id="widget-vento" class="widget-meteo-voce"></p>
+    <p class="widget-meteo-titolo" aria-hidden="true">Meteo pista</p>
+    <dl role="group" aria-label="Condizioni meteo in tempo reale">
+      <dt class="widget-meteo-dt" aria-hidden="true">Pista/Aria</dt>
+      <dd id="widget-temp" class="widget-meteo-voce"></dd>
+      <dt class="widget-meteo-dt" aria-hidden="true">Condizioni</dt>
+      <dd id="widget-cond" class="widget-meteo-voce"></dd>
+      <dt class="widget-meteo-dt" aria-hidden="true">Vento</dt>
+      <dd id="widget-vento" class="widget-meteo-voce"></dd>
+    </dl>
   </aside>
 
   <!-- =========================================================
@@ -713,8 +717,6 @@
     <div class="contenitore-sessione">
       <h2 id="titolo-qualifica-ar1"></h2>
       <p id="desc-qualifica-ar1" class="descrizione-sessione"></p>
-      <div id="segmento-qualifica-ar1" class="etichetta-segmento" aria-live="polite"></div>
-      <div id="contenuto-qualifica-ar1" aria-live="polite"></div>
       <div class="gruppo-azioni" style="margin-top: var(--spazio-xl);">
         <button
           id="btn-checkpoint-qualifica"
@@ -727,6 +729,8 @@
           aria-label="Chiudi le qualifiche e torna alle operazioni"
         >Chiudi qualifiche</button>
       </div>
+      <div id="segmento-qualifica-ar1" class="etichetta-segmento" aria-live="polite"></div>
+      <div id="contenuto-qualifica-ar1" aria-live="polite"></div>
     </div>
   </div>
 
@@ -743,9 +747,6 @@
     <div class="contenitore-sessione">
       <h2 id="titolo-gara-ar1"></h2>
       <p id="desc-gara-ar1" class="descrizione-sessione"></p>
-      <div id="stato-gara-ar1" class="stato-gara-live" aria-live="polite"></div>
-      <div id="contenuto-gara-ar1" aria-live="polite"></div>
-      <div id="eventi-gara-ar1" class="log-eventi-gara" aria-live="polite" aria-atomic="false"></div>
       <div class="gruppo-azioni" style="margin-top: var(--spazio-xl);">
         <button
           id="btn-checkpoint-gara"
@@ -758,6 +759,9 @@
           aria-label="Chiudi la gara e vai al post-gara"
         >Vai al post-gara →</button>
       </div>
+      <div id="stato-gara-ar1" class="stato-gara-live" aria-live="polite"></div>
+      <div id="contenuto-gara-ar1" aria-live="polite"></div>
+      <div id="eventi-gara-ar1" class="log-eventi-gara" aria-live="polite" aria-atomic="false"></div>
     </div>
   </div>
 

@@ -149,11 +149,8 @@ document.addEventListener('DOMContentLoaded', () => {
   el('btn-avanza-fase').addEventListener('click', () => {
     audio.navigazione();
     const fase = motore.stato.faseCorrente;
-    const cat  = motore.stato.categoria;
-    /* In AR2/AR3 "Simula" esegue la sessione automaticamente con impostazioni predefinite.
-       In AR1 (e per le fasi non simulabili) avanza semplicemente. */
-    if (cat !== 'AR1' && ['fp1','fp2','fp3','qualifica','sprint_qualifica','gara','sprint'].includes(fase)) {
-      simulaSessioneCorrente();
+    if (['fp1','fp2','fp3','qualifica','sprint_qualifica','gara','sprint'].includes(fase)) {
+      simulaSessioneAuto();
     } else {
       avanzaFase();
     }
@@ -385,7 +382,7 @@ function renderOperazioni() {
       const dl = crea('dl', { class: 'lista-dati margine-sopra' });
       const vociCircuito = [
         ['Circuito', roundCorrente.circuito],
-        ['Paese', roundCorrente.bandiera + ' ' + roundCorrente.paese],
+        ['Paese', roundCorrente.paese],
         ['Lunghezza', (roundCorrente.lunghezza / 1000).toFixed(3) + ' km'],
         ['Giri', roundCorrente.giri],
         ['Carico aero', roundCorrente.caricoAero],
@@ -448,7 +445,7 @@ function renderOperazioni() {
       });
 
       const intestazione = crea('div', { class: 'intestazione-circuito' });
-      const nomeGara = crea('span', { class: 'nome-circuito' }, circuito.bandiera + ' ' + circuito.nome);
+      const nomeGara = crea('span', { class: 'nome-circuito' }, circuito.nome);
       intestazione.appendChild(nomeGara);
       if (circuito.sprint) {
         /* aria-hidden: l'informazione è già annunciata dall'aria-label della card */
@@ -578,7 +575,7 @@ function _renderPannelloPiloti() {
 
     /* Info base */
     scheda.appendChild(crea('p', { class: 'nazionalita-pilota' },
-      (pilota.bandiera || '') + ' ' + (pilota.nazionalita || '—') + ' · Età ' + (pilota.eta || '—')
+      (pilota.nazionalita || '—') + ' · Età ' + (pilota.eta || '—')
     ));
 
     /* Badge infortunio */
@@ -863,7 +860,7 @@ function _renderPannelloAcademy() {
     cardRiserva.appendChild(intestazione);
 
     cardRiserva.appendChild(crea('p', { class: 'nazionalita-pilota' },
-      (riserva.bandiera || '') + ' ' + (riserva.nazionalita || '—') + ' · Età ' + (riserva.eta || '—')
+      (riserva.nazionalita || '—') + ' · Età ' + (riserva.eta || '—')
     ));
 
     if (riserva.contratto) {
@@ -914,7 +911,7 @@ function _renderPannelloAcademy() {
       scheda.appendChild(intestazione);
 
       scheda.appendChild(crea('p', { class: 'nazionalita-pilota' },
-        (t.bandiera || '') + ' ' + (t.nazionalita || '—') + ' · Età ' + t.eta
+        (t.nazionalita || '—') + ' · Età ' + t.eta
       ));
 
       const dl = crea('dl', { class: 'lista-dati margine-sopra', 'aria-label': 'Dati sviluppo ' + t.nome });
@@ -1158,7 +1155,7 @@ function _renderSondaggiPilotiAR1(contenuto) {
       const cardP = crea('div', { class: 'card margine-sopra',
         'aria-label': `${p.nome}, ${p.eta} anni, talento ${talLabel}` });
       const intestP = crea('div', { class: 'card-intestazione' });
-      intestP.appendChild(crea('span', { class: 'nome-staff' }, (p.bandiera || '') + ' ' + p.nome));
+      intestP.appendChild(crea('span', { class: 'nome-staff' }, p.nome));
       intestP.appendChild(crea('span', { class: 'card-etichetta' }, p.eta + ' anni'));
       cardP.appendChild(intestP);
 
@@ -1204,7 +1201,7 @@ function _renderMercatoPilotiAR2AR3(contenuto, mercatoPiloti, stato) {
   cardRoster.appendChild(crea('h3', {}, 'Rosa attuale'));
   mercatoPiloti.pilotiGiocatore.forEach((p, idx) => {
     const riga = crea('div', { class: 'riga-performance margine-sopra' });
-    const nomeLabel = (p.bandiera || '') + ' ' + (p.nome || '—');
+    const nomeLabel = (p.nome || '—');
     riga.appendChild(crea('span', { class: 'etichetta-performance' }, nomeLabel));
     const tal = p.statistiche?.talento || 0;
     const talLabel2 = _statoStat(tal);
@@ -1238,7 +1235,7 @@ function _renderMercatoPilotiAR2AR3(contenuto, mercatoPiloti, stato) {
     const cardP = crea('div', { class: 'scheda-pilota margine-sopra',
       'aria-label': `${p.nome}, ${p.eta} anni, talento ${poolTalLabel}` });
     const intestazione = crea('div', { class: 'intestazione-pilota' });
-    intestazione.appendChild(crea('span', { class: 'nome-pilota' }, (p.bandiera || '') + ' ' + p.nome));
+    intestazione.appendChild(crea('span', { class: 'nome-pilota' }, p.nome));
     intestazione.appendChild(crea('span', { class: 'nazionalita-pilota' },
       p.eta + ' anni · ' + (p.traiettoria === 'crescita' ? 'In crescita' : 'Esperto')));
     cardP.appendChild(intestazione);
@@ -3151,7 +3148,7 @@ function _renderPannelloRelPiloti() {
 
     const card = crea('section', { class: 'card margine-sopra', 'aria-label': labelCard });
     const intestazione = crea('div', { class: 'card-intestazione' });
-    intestazione.appendChild(crea('span', { class: 'nome-staff' }, (p.bandiera || '') + ' ' + (p.nome || '—')));
+    intestazione.appendChild(crea('span', { class: 'nome-staff' }, (p.nome || '—')));
     intestazione.appendChild(crea('span', { class: 'badge-livello-infrastrutture', style: `background-color:${coloreUmore}; color:#000` }, statoUmore));
     card.appendChild(intestazione);
 
@@ -3454,7 +3451,7 @@ function _renderPannelloRelMedia() {
     cardPiloti.appendChild(crea('h3', {}, 'Piloti con alta visibilità mediatica'));
     pilotiAlta.forEach(p => {
       const dl = crea('dl', { class: 'lista-dati' });
-      dl.appendChild(crea('dt', {}, (p.bandiera || '') + ' ' + (p.nome || '—')));
+      dl.appendChild(crea('dt', {}, (p.nome || '—')));
       dl.appendChild(crea('dd', { 'aria-label': `Visibilità ${p.nome}: ${_statoVisibilita(p.visibilitaMediatica * 10)}` },
         _statoVisibilita(p.visibilitaMediatica * 10)));
       cardPiloti.appendChild(dl);
@@ -3626,7 +3623,7 @@ function _renderPannelloPanPiloti() {
       'aria-label': `${idx + 1}° posto: ${pilota.nome || pilota.pilotaId}, ${etichettaPunti}`
     });
     li.appendChild(crea('span', { class: 'posizione-classifica' + (idx < 3 ? ' podio' : '') }, String(idx + 1)));
-    li.appendChild(crea('span', { class: 'nome-classifica' }, (pilota.bandiera || '') + ' ' + (pilota.nome || pilota.pilotaId)));
+    li.appendChild(crea('span', { class: 'nome-classifica' }, (pilota.nome || pilota.pilotaId)));
     li.appendChild(crea('span', { class: 'punti-classifica' }, etichettaPunti));
     lista.appendChild(li);
   });
@@ -4049,7 +4046,7 @@ function _renderPannelloPanRendimenti() {
     /* Intestazione: posizione + nome */
     const intestazione = crea('div', { class: 'intestazione-pilota' });
     const nomeSpan = crea('span', { class: 'nome-pilota' },
-      posizione + '. ' + (d.bandiera || '') + ' ' + d.nomePilota);
+      posizione + '. ' + d.nomePilota);
     intestazione.appendChild(nomeSpan);
     if (d.isGiocatoreTeam) {
       intestazione.appendChild(crea('span', { class: 'badge-academy', 'aria-hidden': 'true' }, '★'));
@@ -4108,7 +4105,7 @@ function apriPannelloSessione() {
 
   /* Genera e mostra meteo */
   const meteoWeekend = motore.generaMeteoWeekend(circuito);
-  renderMeteo(meteoWeekend, circuito);
+  renderMeteo(meteoWeekend, circuito, true);
 
   /* Imposta contenuto decisioni in base alla fase */
   renderDecisioniSessione(stato.faseCorrente, circuito, meteoWeekend);
@@ -4124,7 +4121,8 @@ function apriPannelloSessione() {
   const isBriefing  = fase === 'briefing';
 
   const btnPartecipa = el('btn-simula-sessione');
-  btnPartecipa.style.display = (isAR1Gara || isFP || isBriefing) ? 'none' : '';
+  const mostraPartecipa = stato.categoria === 'AR1' && (fase === 'qualifica' || fase === 'gara');
+  btnPartecipa.style.display = mostraPartecipa ? '' : 'none';
   btnPartecipa.textContent = 'Partecipa';
   btnPartecipa.setAttribute('aria-label', 'Partecipa attivamente alla sessione con le scelte effettuate');
 
@@ -4169,7 +4167,7 @@ function chiudiPannelloSessione() {
   }
 }
 
-function renderMeteo(meteo, circuito) {
+function renderMeteo(meteo, circuito, annuncia = false) {
   const dl = el('dati-meteo');
   if (!dl) return;
   dl.replaceChildren();
@@ -4186,6 +4184,11 @@ function renderMeteo(meteo, circuito) {
     dl.appendChild(crea('dt', {}, k));
     dl.appendChild(crea('dd', {}, v));
   });
+
+  if (annuncia) {
+    const condStr = meteo.pioggia ? `Pioggia ${meteo.intensitaPioggia}%` : 'Asciutto';
+    annunciaVoiceOver(`Meteo: ${condStr}. Temperatura pista ${meteo.temperaturaPista}°C. Vento ${meteo.vento || 0} km/h${meteo.variabilitaMeteo ? ', condizioni instabili' : ''}.`);
+  }
 }
 
 function renderDecisioniSessione(fase, circuito, meteo) {
@@ -4489,6 +4492,91 @@ function simulaSessioneCorrente() {
   avanzaFase();
 }
 
+function simulaSessioneAuto() {
+  const stato = motore.stato;
+  const circuito = motore.ottieniRoundCorrente();
+  if (!circuito) return;
+
+  const meteo   = motore.generaMeteoWeekend(circuito);
+  const fase    = stato.faseCorrente;
+  const isAR3   = stato.categoria === 'AR3';
+
+  if (['fp1', 'fp2', 'fp3'].includes(fase)) {
+    eseguiSessioneFP('passo_gara', circuito, meteo, fase);
+    return;
+  }
+
+  if (fase === 'qualifica' || fase === 'sprint_qualifica') {
+    const meteoQ = motore.generaMeteoSessione(meteo);
+    const griglia = isAR3
+      ? motore.simulaQualificaAR3(circuito, meteoQ)
+      : motore.simulaQualifica(circuito, meteoQ);
+    mostraRisultatiQualifica(griglia, circuito);
+    return;
+  }
+
+  if (fase === 'sprint') {
+    const meteoS = motore.generaMeteoSessione(meteo);
+    const risultato = isAR3
+      ? motore.simulaSprintAR3(circuito, meteoS)
+      : motore.simulaGara({ ...circuito, giri: Math.round(circuito.giri * 0.33) }, meteoS, stato.grigliaPartenza, {});
+    if (risultato) {
+      motore.avanzaFase();
+      aggiornaStatusBar(motore.stato);
+      mostraRisultatiSprint(risultato, circuito);
+    }
+    return;
+  }
+
+  if (fase === 'gara') {
+    if (stato.categoria === 'AR1') {
+      /* AR1 auto: avvia e loop checkpoint con decisioni default */
+      const meteoGara = motore.generaMeteoSessione(meteo);
+      motore.iniziaGaraAR1(circuito, meteoGara);
+      const deciDefault = { pilota1: { ritmo: 'normale', pitStop: null }, pilota2: { ritmo: 'normale', pitStop: null } };
+      let ris;
+      let n = 0;
+      do {
+        ris = motore.simulaGaraAR1AlCheckpoint(deciDefault);
+        deciDefault.pilota1.pitStop = null;
+        deciDefault.pilota2.pitStop = null;
+        n++;
+      } while (ris && !ris.eConclusaGara && n < 60);
+      motore.aggiornaDeltaOttimizzazione();
+      motore.avanzaFase();
+      aggiornaStatusBar(motore.stato);
+      el('titolo-sessione').textContent = 'Post-gara — ' + circuito.nome;
+      renderDecisioniSessione('post-gara', circuito, meteoGara);
+      const pannello = el('pannello-sessione');
+      pannello.classList.remove('nascosta');
+      pannello.removeAttribute('aria-hidden');
+      el('titolo-sessione').setAttribute('tabindex', '-1');
+      el('titolo-sessione').focus();
+      el('btn-simula-sessione').style.display = 'none';
+      const btnAv = el('btn-avanza-fase');
+      btnAv.textContent = 'Prosegui';
+      btnAv.setAttribute('aria-label', 'Chiudi il resoconto e prosegui');
+      annunciaVoiceOver('Gara completata. Consulta i risultati.');
+      audio.fineSessione();
+      return;
+    }
+    const griglia = stato.grigliaPartenza || (isAR3
+      ? motore.simulaQualificaAR3(circuito, meteo)
+      : motore.simulaQualifica(circuito, meteo));
+    motore.simulaGara(circuito, meteo, griglia, {});
+    motore.aggiornaDeltaOttimizzazione();
+    motore.avanzaFase();
+    aggiornaStatusBar(motore.stato);
+    el('titolo-sessione').textContent = 'Post-gara — ' + circuito.nome;
+    renderDecisioniSessione('post-gara', circuito, meteo);
+    annunciaVoiceOver('Gara terminata. Consulta i risultati nel resoconto.');
+    audio.fineSessione();
+    return;
+  }
+
+  avanzaFase();
+}
+
 function mostraRisultatiQualifica(griglia, circuito) {
   const contenuto = el('contenuto-decisioni');
   contenuto.replaceChildren();
@@ -4710,7 +4798,7 @@ function mostraIntroNuovaPartita(stato) {
   piloti.forEach(p => {
     const rigaPilota = crea('p', {
       'aria-label': p.nome + ', ' + p.nazionalita + ', ' + p.eta + ' anni'
-    }, (p.bandiera || '') + ' ' + p.nome);
+    }, p.nome);
     const dettaglio = crea('span', { class: 'dettaglio' }, p.nazionalita + ' · ' + p.eta + ' anni');
     cardPiloti.appendChild(rigaPilota);
     cardPiloti.appendChild(dettaglio);
@@ -4822,7 +4910,7 @@ function mostraIntergaraAR3() {
     });
     const intestazione = crea('div', { class: 'card-intestazione' });
     intestazione.appendChild(crea('span', { class: 'nome-pilota', style: 'font-size: var(--dim-corpo)' },
-      (p.bandiera || '') + ' ' + p.nome));
+      p.nome));
     intestazione.appendChild(crea('span', { class: 'card-etichetta' }, p.nazionalita + ' · ' + p.eta + ' anni'));
     card.appendChild(intestazione);
 
@@ -5420,7 +5508,7 @@ function _renderFaseQualificaAR1() {
 
     const pannelloPilota = crea('div', { class: 'pannello-pilota-qualifica',
       'aria-label': `Decisioni per ${pilota.nome}` });
-    pannelloPilota.appendChild(crea('h4', {}, (pilota.bandiera || '') + ' ' + pilota.nome));
+    pannelloPilota.appendChild(crea('h4', {}, pilota.nome));
 
     /* Scelta gomma */
     pannelloPilota.appendChild(crea('p', { style: 'font-size:var(--dim-piccolo); color:var(--testo-secondario);' }, 'Mescola:'));
@@ -5727,7 +5815,7 @@ function _renderCheckpointGaraAR1(risultato, circuito) {
 
     const pannelloPilota = crea('div', { class: 'pannello-pilota-gara',
       'aria-label': `Decisioni per ${pilota.nome}` });
-    pannelloPilota.appendChild(crea('h4', {}, (pilota.bandiera || '') + ' ' + pilota.nome));
+    pannelloPilota.appendChild(crea('h4', {}, pilota.nome));
 
     /* Dati live pilota */
     if (partecipante) {
@@ -6586,7 +6674,7 @@ function _renderCapitoloPiloti(contenuto) {
     const inSc = mercato.inScadenza.find(s => s.id === p.id);
     const card = crea('div', { class: 'scheda-pilota margine-sopra' + (inSc ? ' bordo-avviso' : ''), 'aria-label': p.nome });
     const intest = crea('div', { class: 'intestazione-pilota' });
-    intest.appendChild(crea('span', { class: 'nome-pilota' }, (p.bandiera || '') + ' ' + p.nome));
+    intest.appendChild(crea('span', { class: 'nome-pilota' }, p.nome));
     intest.appendChild(crea('span', { class: 'eta-pilota' }, p.eta + ' anni'));
     card.appendChild(intest);
     const dl = crea('dl', { 'aria-label': 'Dettagli contratto ' + p.nome });
@@ -6656,7 +6744,7 @@ function _renderCapitoloPiloti(contenuto) {
     mercato.liberi.forEach(p => {
       const card = crea('div', { class: 'scheda-pilota margine-sopra', 'aria-label': p.nome });
       const intest = crea('div', { class: 'intestazione-pilota' });
-      intest.appendChild(crea('span', { class: 'nome-pilota' }, (p.bandiera || '') + ' ' + p.nome));
+      intest.appendChild(crea('span', { class: 'nome-pilota' }, p.nome));
       intest.appendChild(crea('span', { class: 'eta-pilota' }, p.eta + ' anni'));
       card.appendChild(intest);
       const dl = crea('dl', { 'aria-label': 'Statistiche ' + p.nome });
@@ -6700,7 +6788,7 @@ function _renderCapitoloPiloti(contenuto) {
   if (mercato.riserva) {
     const cardRis = crea('div', { class: 'card margine-sopra' });
     cardRis.appendChild(crea('h3', {}, 'Pilota di riserva'));
-    cardRis.appendChild(crea('p', {}, (mercato.riserva.bandiera || '') + ' ' + mercato.riserva.nome + ' — ' + (mercato.riserva.nazionalita || '') + ', ' + mercato.riserva.eta + ' anni'));
+    cardRis.appendChild(crea('p', {}, mercato.riserva.nome + ' — ' + (mercato.riserva.nazionalita || '') + ', ' + mercato.riserva.eta + ' anni'));
     cardRis.appendChild(crea('p', { class: 'nota-tecnica' }, 'Il pilota di riserva rimane disponibile per sostituzioni in stagione.'));
     contenuto.appendChild(cardRis);
   }
@@ -6709,7 +6797,7 @@ function _renderCapitoloPiloti(contenuto) {
     const cardAca = crea('div', { class: 'card margine-sopra' });
     cardAca.appendChild(crea('h3', {}, 'Academy'));
     mercato.academy.forEach(t => {
-      cardAca.appendChild(crea('p', {}, (t.bandiera || '') + ' ' + t.nome + ' — ' + t.categoriaAttuale + ' · Potenziale: ' + t.potenziale + ' · Anno sviluppo: ' + t.stagioneSviluppo));
+      cardAca.appendChild(crea('p', {}, t.nome + ' — ' + t.categoriaAttuale + ' · Potenziale: ' + t.potenziale + ' · Anno sviluppo: ' + t.stagioneSviluppo));
     });
     contenuto.appendChild(cardAca);
   }
