@@ -148,7 +148,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   el('btn-avanza-fase').addEventListener('click', () => {
     audio.navigazione();
-    avanzaFase();
+    const fase = motore.stato.faseCorrente;
+    const cat  = motore.stato.categoria;
+    /* In AR2/AR3 "Simula" esegue la sessione automaticamente con impostazioni predefinite.
+       In AR1 (e per le fasi non simulabili) avanza semplicemente. */
+    if (cat !== 'AR1' && ['fp1','fp2','fp3','qualifica','sprint_qualifica','gara','sprint'].includes(fase)) {
+      simulaSessioneCorrente();
+    } else {
+      avanzaFase();
+    }
   });
 
   /* Binding dialogo conferma */
@@ -4105,13 +4113,33 @@ function apriPannelloSessione() {
   /* Imposta contenuto decisioni in base alla fase */
   renderDecisioniSessione(stato.faseCorrente, circuito, meteoWeekend);
 
-  /* Mostra/nascondi pulsanti.
-     btn-simula-sessione è nascosto SOLO per AR1 gara: quella categoria usa il pannello
-     checkpoint dedicato (avviaGaraAR1). Per AR2/AR3 gara e sprint il pulsante deve
-     rimanere visibile perché è l'unico modo per avviare simulaSessioneCorrente(). */
-  const isAR1Gara = stato.faseCorrente === 'gara' && stato.categoria === 'AR1';
-  el('btn-simula-sessione').style.display = isAR1Gara ? 'none' : '';
-  el('btn-avanza-fase').style.display = '';
+  /* Pulsanti azioni sessione — label e visibilità contestuali.
+     "Partecipa" (btn-simula-sessione): mostra il coinvolgimento attivo del giocatore.
+       Nascosto per FP (i pulsanti-programma sono già l'azione attiva), per briefing
+       (nessuna simulazione da avviare) e per AR1 gara (usa pannello checkpoint dedicato).
+     "Simula" / "Prosegui" (btn-avanza-fase): esegue automaticamente o avanza. */
+  const fase        = stato.faseCorrente;
+  const isAR1Gara   = fase === 'gara' && stato.categoria === 'AR1';
+  const isFP        = ['fp1', 'fp2', 'fp3'].includes(fase);
+  const isBriefing  = fase === 'briefing';
+
+  const btnPartecipa = el('btn-simula-sessione');
+  btnPartecipa.style.display = (isAR1Gara || isFP || isBriefing) ? 'none' : '';
+  btnPartecipa.textContent = 'Partecipa';
+  btnPartecipa.setAttribute('aria-label', 'Partecipa attivamente alla sessione con le scelte effettuate');
+
+  const btnSimula = el('btn-avanza-fase');
+  btnSimula.style.display = '';
+  if (isBriefing) {
+    btnSimula.textContent = 'Prosegui';
+    btnSimula.setAttribute('aria-label', 'Prosegui alla fase successiva');
+  } else if (isFP) {
+    btnSimula.textContent = 'Simula';
+    btnSimula.setAttribute('aria-label', 'Simula automaticamente la prova libera con programma predefinito');
+  } else {
+    btnSimula.textContent = 'Simula';
+    btnSimula.setAttribute('aria-label', 'Simula automaticamente la sessione con impostazioni predefinite');
+  }
 
   /* Mostra pannello */
   pannello.classList.remove('nascosta');
@@ -5820,7 +5848,10 @@ function apriPannelloSessionePostGara(circuito, meteo) {
   el('titolo-sessione').focus();
 
   el('btn-simula-sessione').style.display = 'none';
-  el('btn-avanza-fase').style.display = '';
+  const btnAvanzaPostGara = el('btn-avanza-fase');
+  btnAvanzaPostGara.style.display = '';
+  btnAvanzaPostGara.textContent = 'Prosegui';
+  btnAvanzaPostGara.setAttribute('aria-label', 'Chiudi il resoconto e prosegui');
 
   annunciaVoiceOver('Conferenza stampa post-gara. Consulta i risultati.');
 }

@@ -839,10 +839,11 @@ class MotoreGioco {
 
   _calcolaPerformanzaPilota(pilota, circuito, meteo) {
     const stat = pilota.statistiche;
-    let base = (stat.talento * 0.35 + stat.costanza * 0.25 + stat.gara * 0.25 + stat.gestione * 0.15);
+    /* gestione e umore sono facoltativi (mancano in AR3/AR2): usa valori di default neutri */
+    let base = (stat.talento * 0.35 + stat.costanza * 0.25 + stat.gara * 0.25 + (stat.gestione ?? 70) * 0.15);
 
-    /* Umore influenza le prestazioni */
-    const fattoreUmore = 0.9 + (pilota.umore / 1000);
+    /* Umore influenza le prestazioni (default 100 se non presente) */
+    const fattoreUmore = 0.9 + ((pilota.umore ?? 100) / 1000);
     base *= fattoreUmore;
 
     /* Pioggia */
@@ -1229,8 +1230,10 @@ class MotoreGioco {
           }
         }
 
-        /* Ritmo giro */
-        const rumore = g.gaussiana(0, 0.5);
+        /* Ritmo giro — sigma maggiore in AR3/AR2 (auto monoposto spec): incidenti,
+           bloccate, traffico rendono i distacchi meno determinati dal puro talento */
+        const sigmaRumore = this.stato.categoria !== 'AR1' ? 1.5 : 0.5;
+        const rumore = g.gaussiana(0, sigmaRumore);
         p.ritmGiro = p.ritmBase * fattoreVelocita + rumore;
         p.punteggioRitmo += p.ritmGiro;
       });
