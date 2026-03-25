@@ -281,6 +281,7 @@ function apriSezione(nomeSezione) {
   /* Mostra la sezione richiesta */
   const target = el('sezione-' + nomeSezione);
   if (!target) return;
+  target.classList.remove('nascosta'); /* difensivo: rimuove eventuale residuo */
   target.classList.add('attiva');
   target.removeAttribute('aria-hidden');
 

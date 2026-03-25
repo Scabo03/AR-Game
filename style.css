@@ -71,8 +71,9 @@ body {
   font-family: var(--font-base);
   background-color: var(--sfondo);
   color: var(--testo-principale);
-  min-height: 100dvh;
-  min-height: -webkit-fill-available;
+  min-height: 100vh;                   /* fallback universale */
+  min-height: 100dvh;                  /* Safari 16+ / Chrome: viewport dinamico */
+  min-height: -webkit-fill-available;  /* Safari iOS: tiene conto della barra URL */
   overflow-x: hidden;
   line-height: 1.5;
   /* Elimina il ritardo 300ms al tap su Safari iOS per tutta l'app */
@@ -110,7 +111,18 @@ body {
   }
 }
 
-/* Focus visibile — mai rimosso */
+/* Focus visibile — mai rimosso.
+   :focus è il fallback per Safari iOS < 15.4 che non supporta :focus-visible.
+   :focus:not(:focus-visible) annulla il ring per interazioni non-tastiera
+   sui browser moderni (non ha effetto su Safari < 15.4, dove tutto focus è visibile).
+   Importante per VoiceOver: il ring deve essere visibile su tutti i browser. */
+:focus {
+  outline: 3px solid var(--testo-principale);
+  outline-offset: 3px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
 :focus-visible {
   outline: 3px solid var(--testo-principale);
   outline-offset: 3px;
@@ -122,7 +134,8 @@ body {
 
 .schermata {
   display: none;
-  min-height: 100dvh;
+  min-height: 100vh;   /* fallback Safari < 16 */
+  min-height: 100dvh;  /* Safari 16+ / Chrome: viewport dinamico (non salta con barra URL) */
   width: 100%;
 }
 
@@ -185,6 +198,7 @@ body {
 }
 
 .btn-menu-principale:hover,
+.btn-menu-principale:focus,
 .btn-menu-principale:focus-visible {
   background-color: #1A1A1A;
   border-color: var(--testo-principale);
@@ -264,6 +278,7 @@ body {
 }
 
 .voce-menu:hover,
+.voce-menu:focus,
 .voce-menu:focus-visible {
   color: var(--testo-principale);
 }
@@ -494,6 +509,7 @@ body {
 }
 
 .btn-azione:hover,
+.btn-azione:focus,
 .btn-azione:focus-visible {
   opacity: 0.85;
 }
@@ -510,6 +526,7 @@ body {
 }
 
 .btn-secondario:hover,
+.btn-secondario:focus,
 .btn-secondario:focus-visible {
   border-color: var(--testo-principale);
   opacity: 1;
@@ -539,6 +556,7 @@ body {
 }
 
 .btn-stepper:hover,
+.btn-stepper:focus,
 .btn-stepper:focus-visible {
   border-color: var(--testo-principale);
 }
@@ -567,6 +585,7 @@ body {
 
 .pannello-overlay {
   position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0; /* fallback Safari 14.0: inset non supportato */
   inset: 0;
   background-color: var(--sfondo);
   z-index: 100;
@@ -616,6 +635,7 @@ body {
 }
 
 .btn-pannello:hover,
+.btn-pannello:focus,
 .btn-pannello:focus-visible {
   border-color: var(--bordo-attivo);
   outline: 2px solid var(--bordo-attivo);
@@ -816,7 +836,19 @@ body {
 #schermata-gioco {
   display: none;
   flex-direction: column;
-  min-height: 100dvh;
+  /* height esatta (non min-height) per creare un flex container delimitato:
+     solo così #area-contenuto con flex:1 + overflow-y:auto crea un vero
+     scroll container invece di far scorrere la pagina intera.
+     Ordine intenzionale: il browser usa l'ultimo valore valido.
+     - Safari iOS < 15: usa -webkit-fill-available (100dvh non riconosciuto)
+     - Safari iOS 15-15.3: usa -webkit-fill-available (100dvh non stabile)
+     - Safari iOS 16+ / Chrome: usa 100dvh (viewport dinamico, ideale) */
+  min-height: 0;           /* annulla il min-height ereditato da .schermata */
+  height: 100vh;           /* fallback base universale */
+  height: 100dvh;          /* Safari 16+ / Chrome: viewport dinamico */
+  height: -webkit-fill-available; /* Safari iOS: tiene conto della barra URL */
+  max-height: 100vh;       /* fallback base universale */
+  max-height: 100dvh;      /* Safari 16+ / Chrome */
 }
 
 #schermata-gioco.attiva {
@@ -973,6 +1005,7 @@ body {
 
 .tutorial-overlay {
   position: fixed;
+  top: 0; right: 0; bottom: 0; left: 0; /* fallback Safari 14.0: inset non supportato */
   inset: 0;
   background-color: rgba(0, 0, 0, 0.88);
   z-index: 300;
