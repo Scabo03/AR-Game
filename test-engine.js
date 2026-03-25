@@ -823,6 +823,40 @@ motore.stato.bonusTokenPU  = 0;
 motore.stato.faseCorrente  = 'pausa_invernale';
 
 /* ============================================================
+   NUOVI METODI DI TRANSIZIONE: iniziaNuovoRound / avviaNuovaStagioneAR2AR3
+   ============================================================ */
+
+/* iniziaNuovoRound: transizione inter-gara → briefing con init round */
+motore.stato.categoria     = 'AR1';
+motore.stato.faseCorrente  = 'inter-gara';
+motore.stato.roundCorrente = 2;
+motore.stato.bonusFPCorrente = 5;
+motore.stato.datiFP = { fp1: { qualita: 80 }, fp2: null, fp3: null };
+noEccezione('iniziaNuovoRound — no eccezione', () => motore.iniziaNuovoRound());
+ok('iniziaNuovoRound — faseCorrente = briefing', motore.stato.faseCorrente === 'briefing');
+ok('iniziaNuovoRound — bonusFPCorrente resettato', motore.stato.bonusFPCorrente === 0);
+ok('iniziaNuovoRound — datiFP resettato', motore.stato.datiFP.fp1 === null);
+
+/* avviaNuovaStagioneAR2AR3: transizione pausa_invernale → inter-gara per AR2/AR3 */
+motore.stato.categoria     = 'AR3';
+motore.stato.faseCorrente  = 'pausa_invernale';
+motore.stato.roundCorrente = 12;
+noEccezione('avviaNuovaStagioneAR2AR3 — no eccezione', () => motore.avviaNuovaStagioneAR2AR3());
+ok('avviaNuovaStagioneAR2AR3 — faseCorrente = inter-gara', motore.stato.faseCorrente === 'inter-gara');
+ok('avviaNuovaStagioneAR2AR3 — roundCorrente = 0', motore.stato.roundCorrente === 0);
+
+/* avviaNuovaStagioneAR2AR3 ignorata per AR1 */
+motore.stato.categoria     = 'AR1';
+motore.stato.faseCorrente  = 'pausa_invernale';
+motore.stato.roundCorrente = 0;
+noEccezione('avviaNuovaStagioneAR2AR3 AR1 — no eccezione', () => motore.avviaNuovaStagioneAR2AR3());
+ok('avviaNuovaStagioneAR2AR3 AR1 — faseCorrente invariata', motore.stato.faseCorrente === 'pausa_invernale');
+
+/* Pulizia */
+motore.stato.categoria     = 'AR1';
+motore.stato.faseCorrente  = 'pausa_invernale';
+
+/* ============================================================
    RIEPILOGO
    ============================================================ */
 console.log('\n' + '='.repeat(60));

@@ -212,8 +212,8 @@ function mostraSchermataDiGioco(stato) {
     return;
   }
 
-  /* Apri sezione operazioni di default */
-  apriSezione('operazioni');
+  /* Router centralizzato: decide la schermata in base a faseCorrente */
+  _routerPrincipale();
 }
 
 function adattaMenuCategoria(categoria) {
@@ -329,15 +329,11 @@ function apriSezione(nomeSezione) {
 function renderOperazioni() {
   const stato = motore.stato;
 
-  /* La pausa estiva è una transizione automatica silenziosa: nessuna schermata,
-     nessun input. Se il gioco arriva qui con faseCorrente = 'pausa_estiva'
-     (avanzamento normale o caricamento di salvataggio esistente), avanza
-     immediatamente all'inter-gara senza mostrare nulla. */
-  if (stato.faseCorrente === 'pausa_estiva') {
-    motore.uscitaDaPausaEstiva();
-    aggiornaStatusBar(motore.stato);
-    if (stato.categoria === 'AR3') mostraIntergaraAR3();
-    else                           mostraIntergaraAR1();
+  /* Difensivo: se il router ci manda qui con una fase che non è di weekend,
+     re-instrada senza mostrare nulla di sbagliato. */
+  const FASI_WEEKEND = new Set(['briefing','fp1','fp2','fp3','qualifica','sprint_qualifica','sprint','gara']);
+  if (!FASI_WEEKEND.has(stato.faseCorrente)) {
+    _routerPrincipale();
     return;
   }
 
@@ -4461,8 +4457,7 @@ function eseguiSessioneFP(programma, circuito, meteo, fase) {
     audio.fineSessione();
     chiudiPannelloSessione();
     motore.avanzaFase();
-    aggiornaStatusBar(motore.stato);
-    apriSezione('operazioni');
+    _routerPrincipale();
   });
 
   annunciaVoiceOver(`Sessione completata. Qualità dati: ${risultato.qualitaDati}%. ${risultato.feedbackStaff}`);
@@ -4505,8 +4500,7 @@ function simulaSessioneCorrente() {
       ? motore.simulaSprintAR3(circuito, meteoS)
       : motore.simulaGara({ ...circuito, giri: Math.round(circuito.giri * 0.33) }, meteoS, stato.grigliaPartenza, {});
     if (risultato) {
-      motore.avanzaFase();
-      aggiornaStatusBar(motore.stato);
+      /* NON avanzare il motore qui: l'avanzamento avviene nel callback di mostraRisultatiSprint */
       mostraRisultatiSprint(risultato, circuito);
     }
     return;
@@ -4519,16 +4513,21 @@ function simulaSessioneCorrente() {
       avviaGaraAR1(circuito, meteo);
       return;
     }
+    /* AR2/AR3: simulazione diretta, poi mostra post-gara nel pannello */
     const griglia = stato.grigliaPartenza || (isAR3
       ? motore.simulaQualificaAR3(circuito, meteo)
       : motore.simulaQualifica(circuito, meteo));
     motore.simulaGara(circuito, meteo, griglia, {});
-    /* Aggiorna delta ottimizzazione AR2/AR3 dopo ogni gara principale */
     motore.aggiornaDeltaOttimizzazione();
-    motore.avanzaFase();
-    aggiornaStatusBar(motore.stato);
+    /* faseCorrente è ancora 'gara'; l'avanzamento avviene nel callback del pulsante */
     el('titolo-sessione').textContent = 'Post-gara — ' + circuito.nome;
     renderDecisioniSessione('post-gara', circuito, meteo);
+    el('btn-simula-sessione').style.display = 'none';
+    _aggiornaBtnAvanzaFase('Prosegui', 'Chiudi il resoconto e prosegui', () => {
+      chiudiPannelloSessione();
+      motore.avanzaFase();   /* gara → post-gara */
+      _routerPrincipale();   /* post-gara auto-attraversato → inter-gara */
+    });
     annunciaVoiceOver('Gara terminata. Consulta i risultati nel resoconto.');
     audio.fineSessione();
     return;
@@ -4567,8 +4566,7 @@ function simulaSessioneAuto() {
       ? motore.simulaSprintAR3(circuito, meteoS)
       : motore.simulaGara({ ...circuito, giri: Math.round(circuito.giri * 0.33) }, meteoS, stato.grigliaPartenza, {});
     if (risultato) {
-      motore.avanzaFase();
-      aggiornaStatusBar(motore.stato);
+      /* NON avanzare il motore qui: l'avanzamento avviene nel callback di mostraRisultatiSprint */
       mostraRisultatiSprint(risultato, circuito);
     }
     return;
@@ -4589,8 +4587,7 @@ function simulaSessioneAuto() {
         n++;
       } while (ris && !ris.eConclusaGara && n < 60);
       motore.aggiornaDeltaOttimizzazione();
-      motore.avanzaFase();
-      aggiornaStatusBar(motore.stato);
+      /* faseCorrente è ancora 'gara'; l'avanzamento avviene nel callback del pulsante */
       el('titolo-sessione').textContent = 'Post-gara — ' + circuito.nome;
       renderDecisioniSessione('post-gara', circuito, meteoGara);
       const pannello = el('pannello-sessione');
@@ -4599,22 +4596,30 @@ function simulaSessioneAuto() {
       el('titolo-sessione').setAttribute('tabindex', '-1');
       el('titolo-sessione').focus();
       el('btn-simula-sessione').style.display = 'none';
-      _aggiornaBtnAvanzaFase('Prosegui', 'Chiudi il resoconto e prosegui');
+      _aggiornaBtnAvanzaFase('Prosegui', 'Chiudi il resoconto e prosegui', () => {
+        chiudiPannelloSessione();
+        motore.avanzaFase();   /* gara → post-gara */
+        _routerPrincipale();   /* post-gara auto-attraversato → inter-gara */
+      });
       annunciaVoiceOver('Gara completata. Consulta i risultati.');
       audio.fineSessione();
       return;
     }
+    /* AR2/AR3 auto */
     const griglia = stato.grigliaPartenza || (isAR3
       ? motore.simulaQualificaAR3(circuito, meteo)
       : motore.simulaQualifica(circuito, meteo));
     motore.simulaGara(circuito, meteo, griglia, {});
     motore.aggiornaDeltaOttimizzazione();
-    motore.avanzaFase();
-    aggiornaStatusBar(motore.stato);
+    /* faseCorrente è ancora 'gara'; l'avanzamento avviene nel callback del pulsante */
     el('titolo-sessione').textContent = 'Post-gara — ' + circuito.nome;
     renderDecisioniSessione('post-gara', circuito, meteo);
     el('btn-simula-sessione').style.display = 'none';
-    _aggiornaBtnAvanzaFase('Prosegui', 'Chiudi il resoconto e prosegui');
+    _aggiornaBtnAvanzaFase('Prosegui', 'Chiudi il resoconto e prosegui', () => {
+      chiudiPannelloSessione();
+      motore.avanzaFase();   /* gara → post-gara */
+      _routerPrincipale();   /* post-gara auto-attraversato → inter-gara */
+    });
     annunciaVoiceOver('Gara terminata. Consulta i risultati nel resoconto.');
     audio.fineSessione();
     return;
@@ -4649,8 +4654,7 @@ function mostraRisultatiQualifica(griglia, circuito) {
     audio.fineSessione();
     chiudiPannelloSessione();
     motore.avanzaFase();
-    aggiornaStatusBar(motore.stato);
-    apriSezione('operazioni');
+    _routerPrincipale();
   });
 
   annunciaVoiceOver('Qualifiche completate. ' + griglia[0]?.pilota?.nome + ' partirà dalla pole position.');
@@ -4757,47 +4761,68 @@ function _eseguiSaltaWeekend() {
     }
   }
 
-  aggiornaStatusBar(motore.stato);
   audio.fineSessione();
-
-  /* Routing finale */
-  const fc = motore.stato.faseCorrente;
-  if (fc === 'pausa_invernale') {
-    mostraFineStagione();
-  } else if (motore.stato.categoria === 'AR3' && fc === 'inter-gara') {
-    mostraIntergaraAR3();
-  } else if (motore.stato.categoria === 'AR1' && fc === 'inter-gara') {
-    mostraIntergaraAR1();
-  } else {
-    apriSezione('operazioni');
-  }
+  _routerPrincipale();
 }
 
 function avanzaFase() {
   chiudiPannelloSessione();
   motore.avanzaFase();
-  aggiornaStatusBar(motore.stato);
+  _routerPrincipale();
+}
 
+/* ============================================================
+   ROUTER CENTRALIZZATO
+   Unico punto di decisione per la navigazione.
+   Chiamato dopo OGNI transizione di stato del motore.
+   Legge faseCorrente e decide cosa mostrare senza logica
+   di routing dispersa in funzioni diverse.
+
+   Mappa completa dei valori di faseCorrente:
+   - 'briefing' | 'fp1' | 'fp2' | 'fp3' | 'qualifica' | 'sprint_qualifica'
+     | 'sprint' | 'gara'  → fasi del weekend: mostra operazioni
+   - 'post-gara'           → non interattiva: auto-avanza a inter-gara
+   - 'pausa_estiva'        → non interattiva: auto-avanza a inter-gara
+   - 'inter-gara'          → mostra overlay inter-gara (AR1 o AR2/AR3)
+   - 'pausa_invernale'     → mostra schermata fine stagione (poi pausa invernale AR1)
+   ============================================================ */
+function _routerPrincipale() {
   const stato = motore.stato;
+  const fase  = stato.faseCorrente;
 
-  /* Fine stagione */
-  if (stato.faseCorrente === 'pausa_invernale') {
+  aggiornaStatusBar(stato);
+
+  /* Fasi non interattive: auto-attraversamento senza input utente */
+  if (fase === 'pausa_estiva') {
+    motore.uscitaDaPausaEstiva();       /* → inter-gara */
+    _routerPrincipale();
+    return;
+  }
+  if (fase === 'post-gara') {
+    motore.avanzaFase();               /* → inter-gara via _terminaRound() */
+    _routerPrincipale();
+    return;
+  }
+
+  /* Overlay inter-gara */
+  if (fase === 'inter-gara') {
+    if (stato.categoria === 'AR1') {
+      mostraIntergaraAR1();
+    } else {
+      mostraIntergaraAR3();            /* usato per AR2 e AR3 */
+    }
+    return;
+  }
+
+  /* Fine stagione → pausa invernale (AR1) o nuova stagione (AR2/AR3) */
+  if (fase === 'pausa_invernale') {
     mostraFineStagione();
     return;
   }
 
-  /* Inter-gara AR3: schermata semplificata */
-  if (stato.categoria === 'AR3' && stato.faseCorrente === 'inter-gara') {
-    mostraIntergaraAR3();
-    return;
-  }
-
-  /* Inter-gara AR1 */
-  if (stato.categoria === 'AR1' && stato.faseCorrente === 'inter-gara') {
-    mostraIntergaraAR1();
-    return;
-  }
-
+  /* Tutte le fasi del weekend: briefing, fp1, fp2, fp3, qualifica,
+     sprint_qualifica, sprint, gara → mostra sezione operazioni */
+  chiudiPannelloSessione();
   apriSezione('operazioni');
 }
 
@@ -4982,7 +5007,6 @@ function mostraIntroNuovaPartita(stato) {
     pannello.classList.add('nascosta');
     pannello.setAttribute('aria-hidden', 'true');
     mostraSchermataDiGioco(stato);
-    apriSezione('operazioni');
   });
 }
 
@@ -5111,13 +5135,8 @@ function mostraIntergaraAR3() {
     audio.conferma();
     pannello.classList.add('nascosta');
     pannello.setAttribute('aria-hidden', 'true');
-    /* Resetta dati FP e bonus weekend prima del nuovo briefing */
-    motore.stato.datiFP = { fp1: null, fp2: null, fp3: null };
-    motore.stato.bonusFPCorrente = 0;
-    motore.stato.faseCorrente = 'briefing';
-    motore.salva();
-    aggiornaStatusBar(motore.stato);
-    apriSezione('operazioni');
+    motore.iniziaNuovoRound();   /* applica upgrade, reset FP, faseCorrente → briefing */
+    _routerPrincipale();
   });
 }
 
@@ -5205,12 +5224,13 @@ function mostraFineStagione() {
     audio.conferma();
     pannello.classList.add('nascosta');
     pannello.setAttribute('aria-hidden', 'true');
-    if (motore.stato.categoria === 'AR1' && motore.stato.faseCorrente === 'pausa_invernale') {
+    if (motore.stato.categoria === 'AR1') {
       mostraPausaInvernale();
     } else {
-      aggiornaStatusBar(motore.stato);
+      /* AR2/AR3: nessuna pausa invernale, avvia subito la nuova stagione */
+      motore.avviaNuovaStagioneAR2AR3();   /* pausa_invernale → inter-gara */
       adattaMenuCategoria(motore.stato.categoria);
-      apriSezione('operazioni');
+      _routerPrincipale();
     }
   });
 }
@@ -5242,13 +5262,13 @@ function mostraRisultatiSprint(risultato, circuito) {
   card.appendChild(ol);
   contenuto.appendChild(card);
 
-  /* Aggiorna btn-avanza-fase (sopra al contenuto nel DOM) ad "Avanza" */
+  /* Aggiorna btn-avanza-fase (sopra al contenuto nel DOM) ad "Avanza".
+     L'avanzamento sprint → fase successiva avviene qui (non nel simulatore). */
   _aggiornaBtnAvanzaFase('Avanza', 'Chiudi la sprint e avanza alla fase successiva', () => {
     audio.navigazione();
     chiudiPannelloSessione();
-    motore.avanzaFase();
-    aggiornaStatusBar(motore.stato);
-    apriSezione('operazioni');
+    motore.avanzaFase();   /* sprint → qualifica (AR1 sprint) o gara (AR2/AR3 sprint) */
+    _routerPrincipale();
   });
 
   annunciaVoiceOver('Sprint Race terminata. ' + (risultato.risultati[0]?.pilota?.nome || '') + ' vince la sprint.');
@@ -5427,8 +5447,7 @@ function _chiudiRiunioneAR1() {
   pannello.setAttribute('aria-hidden', 'true');
   motore.stato.riunioneAR1Vista = true;
   motore.salva();
-  aggiornaStatusBar(motore.stato);
-  apriSezione('operazioni');
+  _routerPrincipale();
 }
 
 /* ============================================================
@@ -5572,10 +5591,8 @@ function mostraIntergaraAR1() {
     audio.conferma();
     pannello.classList.add('nascosta');
     pannello.setAttribute('aria-hidden', 'true');
-    motore.stato.faseCorrente = 'briefing';
-    motore.salva();
-    aggiornaStatusBar(motore.stato);
-    apriSezione('operazioni');
+    motore.iniziaNuovoRound();   /* applica upgrade, reset FP, faseCorrente → briefing */
+    _routerPrincipale();
   });
 }
 
@@ -5638,9 +5655,8 @@ function avviaQualificaAR1(circuito, meteo) {
     nascondiWidgetMeteo();
     pannello.classList.add('nascosta');
     pannello.setAttribute('aria-hidden', 'true');
-    motore.avanzaFase();
-    aggiornaStatusBar(motore.stato);
-    apriSezione('operazioni');
+    motore.avanzaFase();   /* qualifica → gara */
+    _routerPrincipale();
   });
 }
 
@@ -5894,9 +5910,7 @@ function avviaGaraAR1(circuito, meteo) {
     nascondiWidgetMeteo();
     pannello.classList.add('nascosta');
     pannello.setAttribute('aria-hidden', 'true');
-    motore.avanzaFase();
-    aggiornaStatusBar(motore.stato);
-    /* Mostra post-gara nel pannello sessione principale */
+    /* NON avanzare il motore qui: l'avanzamento gara→post-gara avviene nel callback di apriPannelloSessionePostGara */
     apriPannelloSessionePostGara(circuito, meteoGara);
   });
 }
@@ -6091,7 +6105,11 @@ function apriPannelloSessionePostGara(circuito, meteo) {
   el('titolo-sessione').focus();
 
   el('btn-simula-sessione').style.display = 'none';
-  _aggiornaBtnAvanzaFase('Prosegui', 'Chiudi il resoconto e prosegui');
+  _aggiornaBtnAvanzaFase('Prosegui', 'Chiudi il resoconto e prosegui', () => {
+    chiudiPannelloSessione();
+    motore.avanzaFase();   /* gara → post-gara */
+    _routerPrincipale();   /* post-gara auto-attraversato → inter-gara */
+  });
 
   annunciaVoiceOver('Conferenza stampa post-gara. Consulta i risultati.');
 }
@@ -6284,10 +6302,9 @@ function mostraPausaInvernale() {
         pannello.classList.add('nascosta');
         pannello.setAttribute('aria-hidden', 'true');
         audio.inizioSessione();
-        aggiornaStatusBar(motore.stato);
         adattaMenuCategoria(motore.stato.categoria);
-        apriSezione('operazioni');
         annunciaVoiceOver('Stagione ' + motore.stato.stagione + ' avviata.');
+        _routerPrincipale();   /* completaPausaInvernale imposta inter-gara → mostraIntergaraAR1 */
       }
     );
   });

@@ -603,16 +603,6 @@ class MotoreGioco {
     if (prossima === 'inter-gara') {
       this._terminaRound();
     } else {
-      /* Operazioni di inizio weekend */
-      if (prossima === 'briefing') {
-        this.stato.bonusFPCorrente = 0;
-        this.stato.datiFP = { fp1: null, fp2: null, fp3: null };
-        this._applicaUpgradeInArrivo();
-        this._applicaInvestimentiFactory();
-        if (this.stato.categoria === 'AR2') {
-          this._applicaUpgradeAR2();
-        }
-      }
       this.stato.faseCorrente = prossima;
     }
 
@@ -725,6 +715,29 @@ class MotoreGioco {
 
   uscitaDaPausaEstiva() {
     this.stato.faseCorrente = 'inter-gara';
+    this.salva();
+  }
+
+  /* Chiamato dalla UI quando il giocatore conferma l'avanzamento dall'overlay inter-gara.
+     Inizializza il nuovo round: applica upgrade in consegna, resetta dati FP e bonus. */
+  iniziaNuovoRound() {
+    this.stato.bonusFPCorrente = 0;
+    this.stato.datiFP = { fp1: null, fp2: null, fp3: null };
+    this._applicaUpgradeInArrivo();
+    this._applicaInvestimentiFactory();
+    if (this.stato.categoria === 'AR2') {
+      this._applicaUpgradeAR2();
+    }
+    this.stato.faseCorrente = 'briefing';
+    this.salva();
+  }
+
+  /* Avvia la nuova stagione per AR2/AR3 dopo la schermata fine stagione.
+     Non esiste pausa invernale per queste categorie: si passa direttamente a inter-gara. */
+  avviaNuovaStagioneAR2AR3() {
+    if (this.stato.categoria === 'AR1') return;
+    this.stato.faseCorrente = 'inter-gara';
+    this.stato.roundCorrente = 0;
     this.salva();
   }
 
