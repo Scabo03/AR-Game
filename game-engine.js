@@ -1086,7 +1086,7 @@ class MotoreGioco {
      SIMULAZIONE GARA — MOTORE PRINCIPALE
   ---------------------------------------------------------- */
 
-  simulaGara(circuito, meteoBase, grigliaPartenza, strategiaGiocatore) {
+  simulaGara(circuito, meteoBase, grigliaPartenza, strategiaGiocatore, opzioni = {}) {
     /*
      * strategiaGiocatore: {
      *   pilota1: { mescoleOrdinata: ['C3', 'C2'], fermate: [{ giro: 20, mescola: 'C2' }] },
@@ -1263,15 +1263,17 @@ class MotoreGioco {
       giroVeloce.giroVeloce = true;
     }
 
-    /* Calcola punti */
-    risultatiFinali.forEach(r => {
-      const pos = r.posizione;
-      r.puntiGuadagnati = DATI.PUNTI_GARA[pos - 1] || 0;
-      if (r.giroVeloce) r.puntiGuadagnati += DATI.PUNTI_GIRO_VELOCE;
-    });
+    /* Calcola punti (saltati se chiamato da simulaSprintAR3 che li imposta da solo) */
+    if (!opzioni.saltaClassifiche) {
+      risultatiFinali.forEach(r => {
+        const pos = r.posizione;
+        r.puntiGuadagnati = DATI.PUNTI_GARA[pos - 1] || 0;
+        if (r.giroVeloce) r.puntiGuadagnati += DATI.PUNTI_GIRO_VELOCE;
+      });
 
-    /* Aggiorna classifiche */
-    this._aggiornaClassifiche(risultatiFinali);
+      /* Aggiorna classifiche */
+      this._aggiornaClassifiche(risultatiFinali);
+    }
 
     /* Aggiorna statistiche stagione giocatore */
     if (!this.stato.statisticheStagione) {
@@ -1564,9 +1566,11 @@ class MotoreGioco {
     const invertita = [...top10, ...resto];
     invertita.forEach((p, idx) => { p.posizioneGriglia = idx + 1; });
 
-    /* Sprint: circa un terzo dei giri della gara principale */
+    /* Sprint: circa un terzo dei giri della gara principale.
+       saltaClassifiche=true: i punti vengono sovrascritti con PUNTI_SPRINT subito dopo,
+       quindi l'aggiornamento classifiche è delegato a questa funzione per evitare doppio conteggio. */
     const circuitoSprint = { ...circuito, giri: Math.max(8, Math.round(circuito.giri * 0.33)) };
-    const risultato      = this.simulaGara(circuitoSprint, meteoSessione, invertita, {});
+    const risultato      = this.simulaGara(circuitoSprint, meteoSessione, invertita, {}, { saltaClassifiche: true });
 
     /* Punti ridotti per la sprint */
     risultato.risultati.forEach(r => {

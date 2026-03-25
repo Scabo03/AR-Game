@@ -4105,9 +4105,12 @@ function apriPannelloSessione() {
   /* Imposta contenuto decisioni in base alla fase */
   renderDecisioniSessione(stato.faseCorrente, circuito, meteoWeekend);
 
-  /* Mostra/nascondi pulsanti */
-  const isGara = stato.faseCorrente === 'gara' || stato.faseCorrente === 'sprint';
-  el('btn-simula-sessione').style.display = isGara ? 'none' : '';
+  /* Mostra/nascondi pulsanti.
+     btn-simula-sessione è nascosto SOLO per AR1 gara: quella categoria usa il pannello
+     checkpoint dedicato (avviaGaraAR1). Per AR2/AR3 gara e sprint il pulsante deve
+     rimanere visibile perché è l'unico modo per avviare simulaSessioneCorrente(). */
+  const isAR1Gara = stato.faseCorrente === 'gara' && stato.categoria === 'AR1';
+  el('btn-simula-sessione').style.display = isAR1Gara ? 'none' : '';
   el('btn-avanza-fase').style.display = '';
 
   /* Mostra pannello */
