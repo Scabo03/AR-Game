@@ -328,6 +328,19 @@ function apriSezione(nomeSezione) {
 
 function renderOperazioni() {
   const stato = motore.stato;
+
+  /* La pausa estiva è una transizione automatica silenziosa: nessuna schermata,
+     nessun input. Se il gioco arriva qui con faseCorrente = 'pausa_estiva'
+     (avanzamento normale o caricamento di salvataggio esistente), avanza
+     immediatamente all'inter-gara senza mostrare nulla. */
+  if (stato.faseCorrente === 'pausa_estiva') {
+    motore.uscitaDaPausaEstiva();
+    aggiornaStatusBar(motore.stato);
+    if (stato.categoria === 'AR3') mostraIntergaraAR3();
+    else                           mostraIntergaraAR1();
+    return;
+  }
+
   const calendario = motore._ottieniCalendario();
   const roundCorrente = calendario[stato.roundCorrente];
 
@@ -378,6 +391,45 @@ function renderOperazioni() {
         card.appendChild(badge);
       }
 
+      /* Pulsanti azione — PRIMA del contenuto (regola accessibilità).
+         All'inizio del weekend (briefing) offri la scelta Gioca/Salta una volta sola.
+         A weekend già avviato mostra solo Accedi alla fase corrente. */
+      if (stato.faseCorrente === 'briefing') {
+        const gruppoAzioni = crea('div', { class: 'gruppo-azioni margine-sopra' });
+
+        const btnGioca = crea('button', {
+          class: 'btn-azione',
+          'aria-label': 'Gioca il weekend: partecipa attivamente a tutte le sessioni'
+        }, 'Gioca il weekend');
+        btnGioca.addEventListener('click', () => {
+          audio.inizioSessione();
+          apriPannelloSessione();
+        });
+        gruppoAzioni.appendChild(btnGioca);
+
+        const btnSalta = crea('button', {
+          class: 'btn-azione btn-secondario',
+          'aria-label': 'Salta il weekend: tutto verrà eseguito in automatico, il gioco passerà direttamente all\'inter-gara'
+        }, 'Salta il weekend');
+        btnSalta.addEventListener('click', () => {
+          audio.navigazione();
+          saltaInteroWeekend();
+        });
+        gruppoAzioni.appendChild(btnSalta);
+
+        card.appendChild(gruppoAzioni);
+      } else {
+        const btnAccedi = crea('button', {
+          class: 'btn-azione margine-sopra',
+          'aria-label': 'Accedi alla fase ' + _nomeFase(stato.faseCorrente)
+        }, 'Accedi → ' + _nomeFase(stato.faseCorrente));
+        btnAccedi.addEventListener('click', () => {
+          audio.inizioSessione();
+          apriPannelloSessione();
+        });
+        card.appendChild(btnAccedi);
+      }
+
       /* Dati circuito */
       const dl = crea('dl', { class: 'lista-dati margine-sopra' });
       const vociCircuito = [
@@ -409,22 +461,11 @@ function renderOperazioni() {
       card.appendChild(gruppoMescole);
 
       /* Fase corrente */
-      const fase = crea('p', {
+      const faseLabel = crea('p', {
         class: 'margine-sopra',
         style: 'color: var(--colore-operazioni); font-weight: 600;'
       }, 'Fase corrente: ' + _nomeFase(stato.faseCorrente));
-      card.appendChild(fase);
-
-      /* Pulsante avanza */
-      const btnAvanza = crea('button', {
-        class: 'btn-azione margine-sopra',
-        'aria-label': 'Accedi alla fase ' + _nomeFase(stato.faseCorrente)
-      }, 'Accedi → ' + _nomeFase(stato.faseCorrente));
-      btnAvanza.addEventListener('click', () => {
-        audio.inizioSessione();
-        apriPannelloSessione();
-      });
-      card.appendChild(btnAvanza);
+      card.appendChild(faseLabel);
 
       contenutoProssimo.appendChild(card);
     }
@@ -4110,33 +4151,55 @@ function apriPannelloSessione() {
   /* Imposta contenuto decisioni in base alla fase */
   renderDecisioniSessione(stato.faseCorrente, circuito, meteoWeekend);
 
-  /* Pulsanti azioni sessione — label e visibilità contestuali.
-     "Partecipa" (btn-simula-sessione): mostra il coinvolgimento attivo del giocatore.
-       Nascosto per FP (i pulsanti-programma sono già l'azione attiva), per briefing
-       (nessuna simulazione da avviare) e per AR1 gara (usa pannello checkpoint dedicato).
-     "Simula" / "Prosegui" (btn-avanza-fase): esegue automaticamente o avanza. */
+  /* Pulsanti azioni sessione.
+     Regole non negoziabili:
+     - Nessun pulsante può portare le parole Simula, Salta, Automatico o equivalenti.
+     - In FP entrambi i pulsanti fissi sono nascosti: l'azione è selezionare un programma.
+     - Per qualifica/gara AR1 interattiva: solo btn-simula-sessione ("Partecipa").
+     - Per tutte le altre sessioni a esecuzione diretta: solo btn-avanza-fase con label specifica.
+     - Per briefing: solo btn-avanza-fase = "Prosegui". */
   const fase        = stato.faseCorrente;
-  const isAR1Gara   = fase === 'gara' && stato.categoria === 'AR1';
   const isFP        = ['fp1', 'fp2', 'fp3'].includes(fase);
   const isBriefing  = fase === 'briefing';
+  const isAR1Interattiva = stato.categoria === 'AR1' && (fase === 'qualifica' || fase === 'gara');
 
   const btnPartecipa = el('btn-simula-sessione');
-  const mostraPartecipa = stato.categoria === 'AR1' && (fase === 'qualifica' || fase === 'gara');
-  btnPartecipa.style.display = mostraPartecipa ? '' : 'none';
-  btnPartecipa.textContent = 'Partecipa';
-  btnPartecipa.setAttribute('aria-label', 'Partecipa attivamente alla sessione con le scelte effettuate');
+  const btnAvanza    = el('btn-avanza-fase');
 
-  const btnSimula = el('btn-avanza-fase');
-  btnSimula.style.display = '';
-  if (isBriefing) {
-    btnSimula.textContent = 'Prosegui';
-    btnSimula.setAttribute('aria-label', 'Prosegui alla fase successiva');
-  } else if (isFP) {
-    btnSimula.textContent = 'Simula';
-    btnSimula.setAttribute('aria-label', 'Simula automaticamente la prova libera con programma predefinito');
+  if (isFP) {
+    /* FP: nessun pulsante fisso — il giocatore deve scegliere un programma */
+    btnPartecipa.style.display = 'none';
+    btnAvanza.style.display    = 'none';
+  } else if (isBriefing) {
+    btnPartecipa.style.display = 'none';
+    btnAvanza.style.display    = '';
+    btnAvanza.textContent      = 'Prosegui';
+    btnAvanza.setAttribute('aria-label', 'Prosegui alla prima sessione del weekend');
+  } else if (isAR1Interattiva) {
+    /* AR1 qualifica e gara: modalità interattiva a checkpoint */
+    btnPartecipa.style.display = '';
+    btnPartecipa.textContent   = 'Partecipa';
+    btnPartecipa.setAttribute('aria-label',
+      fase === 'qualifica' ? 'Partecipa alle qualifiche con le decisioni in tempo reale'
+                           : 'Partecipa alla gara con le decisioni in tempo reale');
+    btnAvanza.style.display    = 'none';
   } else {
-    btnSimula.textContent = 'Simula';
-    btnSimula.setAttribute('aria-label', 'Simula automaticamente la sessione con impostazioni predefinite');
+    /* Tutte le altre sessioni: esecuzione diretta (non-AR1 qualifica/gara/sprint) */
+    btnPartecipa.style.display = 'none';
+    btnAvanza.style.display    = '';
+    if (fase === 'qualifica' || fase === 'sprint_qualifica') {
+      btnAvanza.textContent = 'Avvia qualifica';
+      btnAvanza.setAttribute('aria-label', 'Avvia la sessione di qualifica');
+    } else if (fase === 'gara') {
+      btnAvanza.textContent = 'Avvia gara';
+      btnAvanza.setAttribute('aria-label', 'Avvia la gara');
+    } else if (fase === 'sprint') {
+      btnAvanza.textContent = 'Avvia sprint';
+      btnAvanza.setAttribute('aria-label', 'Avvia la sprint race');
+    } else {
+      btnAvanza.textContent = 'Avanza';
+      btnAvanza.setAttribute('aria-label', 'Avanza alla fase successiva');
+    }
   }
 
   /* Mostra pannello */
@@ -4147,7 +4210,7 @@ function apriPannelloSessione() {
   el('titolo-sessione').setAttribute('tabindex', '-1');
   el('titolo-sessione').focus();
 
-  annunciaVoiceOver(_nomeFase(stato.faseCorrente) + ' — ' + circuito.nome + '. Scegli il programma o simula la sessione.');
+  annunciaVoiceOver(_nomeFase(stato.faseCorrente) + ' — ' + circuito.nome + (isFP ? '. Scegli il programma di lavoro.' : '.'));
 
   /* Mostra tutorial se necessario (AR3, prima occorrenza per questa fase) */
   const testoTutorial = motore.ottieniTestoTutorial(stato.faseCorrente);
@@ -4277,7 +4340,7 @@ function _renderDecisioniFP(contenuto, circuito, meteo, fase) {
 function _renderDecisioniQualifica(contenuto, circuito, meteo) {
   const card = crea('div', { class: 'card' });
   card.appendChild(crea('h4', {}, 'Qualifiche'));
-  card.appendChild(crea('p', { class: 'card-etichetta margine-sopra' }, 'Il tuo staff ha ottimizzato il setup sul singolo giro. Premi Simula per eseguire le qualifiche.'));
+  card.appendChild(crea('p', { class: 'card-etichetta margine-sopra' }, 'Il tuo staff ha ottimizzato il setup sul singolo giro. Premi il pulsante in alto per avviare la sessione.'));
   contenuto.appendChild(card);
 }
 
@@ -4361,20 +4424,7 @@ function _renderPostGara(contenuto) {
   });
   card.appendChild(ol);
   contenuto.appendChild(card);
-
-  /* Pulsante chiudi */
-  const btnChiudi = crea('button', {
-    class: 'btn-azione margine-sopra',
-    'aria-label': 'Chiudi resoconto e torna alla schermata principale'
-  }, 'Chiudi resoconto');
-  btnChiudi.addEventListener('click', () => {
-    audio.fineSessione();
-    chiudiPannelloSessione();
-    motore.avanzaFase();
-    aggiornaStatusBar(motore.stato);
-    apriSezione('operazioni');
-  });
-  contenuto.appendChild(btnChiudi);
+  /* btn-avanza-fase in cima al pannello è già impostato a "Prosegui" dal chiamante */
 }
 
 /* ============================================================
@@ -4404,20 +4454,16 @@ function eseguiSessioneFP(programma, circuito, meteo, fase) {
     audio.eventoImprevisto();
   }
 
-  const btnAvanza = crea('button', {
-    class: 'btn-azione margine-sopra',
-    'aria-label': 'Chiudi e avanza alla fase successiva'
-  }, 'Avanza');
-  btnAvanza.addEventListener('click', () => {
+  contenuto.appendChild(card);
+
+  /* Aggiorna btn-avanza-fase (già sopra al contenuto nel DOM) ad "Avanza" */
+  _aggiornaBtnAvanzaFase('Avanza', 'Chiudi la sessione e avanza alla fase successiva', () => {
     audio.fineSessione();
     chiudiPannelloSessione();
     motore.avanzaFase();
     aggiornaStatusBar(motore.stato);
     apriSezione('operazioni');
   });
-
-  card.appendChild(btnAvanza);
-  contenuto.appendChild(card);
 
   annunciaVoiceOver(`Sessione completata. Qualità dati: ${risultato.qualitaDati}%. ${risultato.feedbackStaff}`);
   audio.notificaStaff();
@@ -4553,9 +4599,7 @@ function simulaSessioneAuto() {
       el('titolo-sessione').setAttribute('tabindex', '-1');
       el('titolo-sessione').focus();
       el('btn-simula-sessione').style.display = 'none';
-      const btnAv = el('btn-avanza-fase');
-      btnAv.textContent = 'Prosegui';
-      btnAv.setAttribute('aria-label', 'Chiudi il resoconto e prosegui');
+      _aggiornaBtnAvanzaFase('Prosegui', 'Chiudi il resoconto e prosegui');
       annunciaVoiceOver('Gara completata. Consulta i risultati.');
       audio.fineSessione();
       return;
@@ -4569,6 +4613,8 @@ function simulaSessioneAuto() {
     aggiornaStatusBar(motore.stato);
     el('titolo-sessione').textContent = 'Post-gara — ' + circuito.nome;
     renderDecisioniSessione('post-gara', circuito, meteo);
+    el('btn-simula-sessione').style.display = 'none';
+    _aggiornaBtnAvanzaFase('Prosegui', 'Chiudi il resoconto e prosegui');
     annunciaVoiceOver('Gara terminata. Consulta i risultati nel resoconto.');
     audio.fineSessione();
     return;
@@ -4596,22 +4642,135 @@ function mostraRisultatiQualifica(griglia, circuito) {
     ol.appendChild(li);
   });
   card.appendChild(ol);
+  contenuto.appendChild(card);
 
-  const btnAvanza = crea('button', {
-    class: 'btn-azione margine-sopra',
-    'aria-label': 'Avanza alla fase successiva'
-  }, 'Avanza');
-  btnAvanza.addEventListener('click', () => {
+  /* Aggiorna btn-avanza-fase (sopra al contenuto nel DOM) ad "Avanza" */
+  _aggiornaBtnAvanzaFase('Avanza', 'Chiudi le qualifiche e avanza alla fase successiva', () => {
     audio.fineSessione();
     chiudiPannelloSessione();
     motore.avanzaFase();
     aggiornaStatusBar(motore.stato);
     apriSezione('operazioni');
   });
-  card.appendChild(btnAvanza);
-  contenuto.appendChild(card);
 
   annunciaVoiceOver('Qualifiche completate. ' + griglia[0]?.pilota?.nome + ' partirà dalla pole position.');
+}
+
+/* ============================================================
+   HELPER — aggiorna btn-avanza-fase sostituendolo con clone fresco
+   (evita accumulo di event listener dopo più sessioni nello stesso weekend)
+   Se callback è omesso, il click usa il binding originale (avanzaFase per
+   fasi non-sessione, simulaSessioneAuto per fasi sessione).
+   ============================================================ */
+function _aggiornaBtnAvanzaFase(testo, ariaLabel, callback) {
+  const vecchio = el('btn-avanza-fase');
+  if (!vecchio) return;
+  const nuovo = vecchio.cloneNode(false);
+  nuovo.textContent = testo;
+  nuovo.setAttribute('aria-label', ariaLabel);
+  nuovo.style.display = '';
+  if (callback) {
+    nuovo.addEventListener('click', () => { audio.navigazione(); callback(); });
+  } else {
+    /* Binding di default: avanza senza simulare (usato per Prosegui post-gara) */
+    nuovo.addEventListener('click', () => { audio.navigazione(); avanzaFase(); });
+  }
+  vecchio.parentNode.replaceChild(nuovo, vecchio);
+}
+
+/* ============================================================
+   SALTA INTERO WEEKEND
+   Scelta offerta una sola volta, prima del briefing.
+   Simula tutto il weekend silenziosamente e porta direttamente
+   all'inter-gara senza mostrare nessuna sessione al giocatore.
+   ============================================================ */
+function saltaInteroWeekend() {
+  mostraDialogo(
+    'Salta il weekend',
+    'Il weekend verrà eseguito automaticamente. Passerai direttamente all\'inter-gara.',
+    _eseguiSaltaWeekend
+  );
+}
+
+function _eseguiSaltaWeekend() {
+  const circuito = motore.ottieniRoundCorrente();
+  if (!circuito) return;
+
+  const meteo  = motore.generaMeteoWeekend(circuito);
+  const isAR3  = motore.stato.categoria === 'AR3';
+  const isAR1  = motore.stato.categoria === 'AR1';
+
+  /* Avanza oltre il briefing */
+  motore.avanzaFase();
+
+  /* Simula tutte le fasi rimanenti fino a inter-gara */
+  let iter = 0;
+  while (!['inter-gara', 'pausa_invernale', 'pausa_estiva'].includes(motore.stato.faseCorrente) && iter < 25) {
+    const fase = motore.stato.faseCorrente;
+    iter++;
+
+    if (['fp1', 'fp2', 'fp3'].includes(fase)) {
+      const ms = motore.generaMeteoSessione(meteo);
+      motore.simulaSessioneFP(circuito, ms, 'passo_gara');
+      motore.avanzaFase();
+
+    } else if (fase === 'qualifica' || fase === 'sprint_qualifica') {
+      const mq = motore.generaMeteoSessione(meteo);
+      if (isAR3) motore.simulaQualificaAR3(circuito, mq);
+      else       motore.simulaQualifica(circuito, mq);
+      motore.avanzaFase();
+
+    } else if (fase === 'sprint') {
+      const ms2 = motore.generaMeteoSessione(meteo);
+      const giriS = Math.round(circuito.giri * 0.33);
+      const griglia = motore.stato.grigliaPartenza;
+      if (isAR3) motore.simulaSprintAR3(circuito, ms2);
+      else       motore.simulaGara({ ...circuito, giri: giriS }, ms2, griglia, {});
+      motore.avanzaFase();
+
+    } else if (fase === 'gara') {
+      if (isAR1) {
+        const mg = motore.generaMeteoSessione(meteo);
+        motore.iniziaGaraAR1(circuito, mg);
+        const dec = { pilota1: { ritmo: 'normale', pitStop: null }, pilota2: { ritmo: 'normale', pitStop: null } };
+        let ris; let n = 0;
+        do {
+          ris = motore.simulaGaraAR1AlCheckpoint(dec);
+          dec.pilota1.pitStop = null;
+          dec.pilota2.pitStop = null;
+          n++;
+        } while (ris && !ris.eConclusaGara && n < 60);
+        motore.aggiornaDeltaOttimizzazione();
+      } else {
+        const mg2 = motore.generaMeteoSessione(meteo);
+        const gr = motore.stato.grigliaPartenza || (isAR3
+          ? motore.simulaQualificaAR3(circuito, mg2)
+          : motore.simulaQualifica(circuito, mg2));
+        motore.simulaGara(circuito, mg2, gr, {});
+        motore.aggiornaDeltaOttimizzazione();
+      }
+      motore.avanzaFase();
+
+    } else {
+      /* post-gara o altre fasi: avanza direttamente */
+      motore.avanzaFase();
+    }
+  }
+
+  aggiornaStatusBar(motore.stato);
+  audio.fineSessione();
+
+  /* Routing finale */
+  const fc = motore.stato.faseCorrente;
+  if (fc === 'pausa_invernale') {
+    mostraFineStagione();
+  } else if (motore.stato.categoria === 'AR3' && fc === 'inter-gara') {
+    mostraIntergaraAR3();
+  } else if (motore.stato.categoria === 'AR1' && fc === 'inter-gara') {
+    mostraIntergaraAR1();
+  } else {
+    apriSezione('operazioni');
+  }
 }
 
 function avanzaFase() {
@@ -5081,20 +5240,16 @@ function mostraRisultatiSprint(risultato, circuito) {
     ol.appendChild(li);
   });
   card.appendChild(ol);
+  contenuto.appendChild(card);
 
-  const btnAvanza = crea('button', {
-    class: 'btn-azione margine-sopra',
-    'aria-label': 'Avanza alla gara principale'
-  }, 'Avanza alla gara →');
-  btnAvanza.addEventListener('click', () => {
+  /* Aggiorna btn-avanza-fase (sopra al contenuto nel DOM) ad "Avanza" */
+  _aggiornaBtnAvanzaFase('Avanza', 'Chiudi la sprint e avanza alla fase successiva', () => {
     audio.navigazione();
     chiudiPannelloSessione();
     motore.avanzaFase();
     aggiornaStatusBar(motore.stato);
     apriSezione('operazioni');
   });
-  card.appendChild(btnAvanza);
-  contenuto.appendChild(card);
 
   annunciaVoiceOver('Sprint Race terminata. ' + (risultato.risultati[0]?.pilota?.nome || '') + ' vince la sprint.');
   audio.fineSessione();
@@ -5936,10 +6091,7 @@ function apriPannelloSessionePostGara(circuito, meteo) {
   el('titolo-sessione').focus();
 
   el('btn-simula-sessione').style.display = 'none';
-  const btnAvanzaPostGara = el('btn-avanza-fase');
-  btnAvanzaPostGara.style.display = '';
-  btnAvanzaPostGara.textContent = 'Prosegui';
-  btnAvanzaPostGara.setAttribute('aria-label', 'Chiudi il resoconto e prosegui');
+  _aggiornaBtnAvanzaFase('Prosegui', 'Chiudi il resoconto e prosegui');
 
   annunciaVoiceOver('Conferenza stampa post-gara. Consulta i risultati.');
 }
