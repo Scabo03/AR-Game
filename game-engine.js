@@ -1686,8 +1686,8 @@ class MotoreGioco {
       const bonusGomma  = this._bonusGommaQualifica(p.gommaCorrente, circuito.mescole);
 
       const tempoBase = 75000 + (100 - ((perfVettura * 0.65) + (perfPilota * 0.35))) * 400;
-      /* Più varianza al primo checkpoint: gomme fredde, assetto non ancora ottimale */
-      const varianza  = sq.checkpointCorrente === 1 ? 280 : 140;
+      /* Unico checkpoint per segmento: varianza media (giro definitivo) */
+      const varianza  = 160;
       const rumore    = g.gaussiana(0, varianza);
       const tempoBagnato = sq.meteoAttuale.pioggia ? g.intervallo(2000, 8000) : 0;
       const tempo     = Math.round(tempoBase + rumore + tempoBagnato - bonusGomma);
@@ -1705,7 +1705,7 @@ class MotoreGioco {
       return a.tempoMiglioreMs - b.tempoMiglioreMs;
     });
 
-    const eFineSegmento = sq.checkpointCorrente === 2;
+    const eFineSegmento = true;   /* 1 checkpoint per segmento (Q1 / Q2 / Q3) */
     const risultato = {
       segmento: sq.segmentoCorrente,
       checkpoint: sq.checkpointCorrente,

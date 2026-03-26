@@ -4157,7 +4157,9 @@ function apriPannelloSessione() {
   const fase        = stato.faseCorrente;
   const isFP        = ['fp1', 'fp2', 'fp3'].includes(fase);
   const isBriefing  = fase === 'briefing';
-  const isAR1Interattiva = stato.categoria === 'AR1' && (fase === 'qualifica' || fase === 'gara');
+  const isInterattiva = (stato.categoria === 'AR1' && (fase === 'qualifica' || fase === 'gara')) ||
+                        (stato.categoria === 'AR2' && (fase === 'qualifica' || fase === 'gara')) ||
+                        (stato.categoria === 'AR3' && fase === 'gara');
 
   const btnPartecipa = el('btn-simula-sessione');
   const btnAvanza    = el('btn-avanza-fase');
@@ -4171,13 +4173,13 @@ function apriPannelloSessione() {
     btnAvanza.style.display    = '';
     btnAvanza.textContent      = 'Prosegui';
     btnAvanza.setAttribute('aria-label', 'Prosegui alla prima sessione del weekend');
-  } else if (isAR1Interattiva) {
-    /* AR1 qualifica e gara: modalità interattiva a checkpoint */
+  } else if (isInterattiva) {
+    /* Modalità interattiva a checkpoint (AR1 qualifica/gara, AR2 qualifica/gara, AR3 gara) */
     btnPartecipa.style.display = '';
     btnPartecipa.textContent   = 'Partecipa';
     btnPartecipa.setAttribute('aria-label',
-      fase === 'qualifica' ? 'Partecipa alle qualifiche con le decisioni in tempo reale'
-                           : 'Partecipa alla gara con le decisioni in tempo reale');
+      fase === 'qualifica' ? 'Partecipa alle qualifiche con le decisioni ai checkpoint'
+                           : 'Partecipa alla gara con le decisioni ai checkpoint');
     btnAvanza.style.display    = 'none';
   } else {
     /* Tutte le altre sessioni: esecuzione diretta (non-AR1 qualifica/gara/sprint) */
@@ -4486,6 +4488,11 @@ function simulaSessioneCorrente() {
       avviaQualificaAR1(circuito, meteo);
       return;
     }
+    if (stato.categoria === 'AR2' && fase === 'qualifica') {
+      chiudiPannelloSessione();
+      avviaQualificaAR2Checkpoint(circuito, meteo);
+      return;
+    }
     const meteoQ = motore.generaMeteoSessione(meteo);
     const griglia = isAR3
       ? motore.simulaQualificaAR3(circuito, meteoQ)
@@ -4513,7 +4520,17 @@ function simulaSessioneCorrente() {
       avviaGaraAR1(circuito, meteo);
       return;
     }
-    /* AR2/AR3: simulazione diretta, poi mostra post-gara nel pannello */
+    if (stato.categoria === 'AR2') {
+      chiudiPannelloSessione();
+      avviaGaraAR2Checkpoint(circuito, meteo);
+      return;
+    }
+    if (stato.categoria === 'AR3') {
+      chiudiPannelloSessione();
+      avviaGaraAR3Checkpoint(circuito, meteo);
+      return;
+    }
+    /* Fallback: simulazione diretta (non dovrebbe essere raggiunto) */
     const griglia = stato.grigliaPartenza || (isAR3
       ? motore.simulaQualificaAR3(circuito, meteo)
       : motore.simulaQualifica(circuito, meteo));
@@ -5602,6 +5619,7 @@ function mostraIntergaraAR1() {
 
 /* Stato locale delle decisioni qualifica (reset a ogni apertura) */
 let _decisioniQualificaAR1 = { pilota1: {}, pilota2: {} };
+let _bonusQualificaAR1Acc  = 0;   /* accumulato su Q1+Q2+Q3, azzerato ad ogni nuova qualifica */
 
 function avviaQualificaAR1(circuito, meteo) {
   const pannello = el('pannello-qualifica-ar1');
@@ -5615,9 +5633,10 @@ function avviaQualificaAR1(circuito, meteo) {
 
   mostraWidgetMeteo(meteoSessione);
 
+  _bonusQualificaAR1Acc = 0;
   _decisioniQualificaAR1 = {
-    pilota1: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1] },
-    pilota2: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1] }
+    pilota1: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1], timing: 'tardi', settori: 'bilanciato' },
+    pilota2: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1], timing: 'tardi', settori: 'bilanciato' }
   };
 
   _renderFaseQualificaAR1();
@@ -5636,6 +5655,8 @@ function avviaQualificaAR1(circuito, meteo) {
   btnCP.parentNode.replaceChild(btnCPFresh, btnCP);
   btnCPFresh.addEventListener('click', () => {
     audio.conferma();
+    _bonusQualificaAR1Acc += _calcolaBonusCheckpointDecisioni(_decisioniQualificaAR1,
+      { tipo: 'qualifica_ar1', circuito, meteo: motore.stato.statoQualificaAttivo?.meteoAttuale });
     const risultato = motore.simulaQualificaAR1Checkpoint(_decisioniQualificaAR1);
     if (!risultato) return;
     aggiornaWidgetMeteo(risultato.meteoAttuale);
@@ -5665,7 +5686,7 @@ function _renderFaseQualificaAR1() {
   if (!sq) return;
 
   const nomeSegmento = ['Q1', 'Q2', 'Q3'][sq.segmentoCorrente - 1];
-  el('segmento-qualifica-ar1').textContent = nomeSegmento + ' — Checkpoint ' + sq.checkpointCorrente + ' / 2';
+  el('segmento-qualifica-ar1').textContent = nomeSegmento + ' — Checkpoint 1 / 1';
 
   const contenuto = el('contenuto-qualifica-ar1');
   contenuto.replaceChildren();
@@ -5717,10 +5738,38 @@ function _renderFaseQualificaAR1() {
     });
     pannelloPilota.appendChild(gruppoAzione);
 
+    /* Timing giro veloce */
+    pannelloPilota.appendChild(crea('p', { style: 'font-size:var(--dim-piccolo); color:var(--testo-secondario); margin-top:var(--spazio-s)' }, 'Timing giro:'));
+    const gruppoTiming = crea('div', { class: 'gruppo-decisione-qualifica' });
+    [{ v: 'presto', label: 'Presto' }, { v: 'centrale', label: 'Centrale' }, { v: 'tardi', label: 'Tardi' }].forEach(({ v, label }) => {
+      const btn = crea('button', {
+        class: 'btn-decisione' + (dec.timing === v ? ' selezionato' : ''),
+        'aria-label': label + (dec.timing === v ? ', selezionato' : ''),
+        'aria-pressed': dec.timing === v ? 'true' : 'false'
+      }, label);
+      btn.addEventListener('click', () => { _decisioniQualificaAR1[chiave].timing = v; _renderFaseQualificaAR1(); });
+      gruppoTiming.appendChild(btn);
+    });
+    pannelloPilota.appendChild(gruppoTiming);
+
+    /* Strategia settori */
+    pannelloPilota.appendChild(crea('p', { style: 'font-size:var(--dim-piccolo); color:var(--testo-secondario); margin-top:var(--spazio-s)' }, 'Settori:'));
+    const gruppoSettori = crea('div', { class: 'gruppo-decisione-qualifica' });
+    [{ v: 'bilanciato', label: 'Bilanciato' }, { v: 'trazione', label: 'Trazione' }, { v: 'alta_velocita', label: 'Alta vel.' }].forEach(({ v, label }) => {
+      const btn = crea('button', {
+        class: 'btn-decisione' + (dec.settori === v ? ' selezionato' : ''),
+        'aria-label': label + (dec.settori === v ? ', selezionato' : ''),
+        'aria-pressed': dec.settori === v ? 'true' : 'false'
+      }, label);
+      btn.addEventListener('click', () => { _decisioniQualificaAR1[chiave].settori = v; _renderFaseQualificaAR1(); });
+      gruppoSettori.appendChild(btn);
+    });
+    pannelloPilota.appendChild(gruppoSettori);
+
     contenuto.appendChild(pannelloPilota);
   });
 
-  annunciaVoiceOver((['Q1', 'Q2', 'Q3'][sq.segmentoCorrente - 1]) + ', checkpoint ' + sq.checkpointCorrente + '. Scegli gomma e azione per ogni pilota, poi avanza.');
+  annunciaVoiceOver((['Q1', 'Q2', 'Q3'][sq.segmentoCorrente - 1]) + ', checkpoint 1. Scegli mescola, azione, timing e settori per ogni pilota, poi avanza.');
 }
 
 function _renderRisultatoCheckpointQ(risultato, circuito) {
@@ -5752,8 +5801,8 @@ function _renderRisultatoCheckpointQ(risultato, circuito) {
 
     /* Prepara decisioni per il segmento successivo e re-render */
     _decisioniQualificaAR1 = {
-      pilota1: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1] },
-      pilota2: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1] }
+      pilota1: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1], timing: 'tardi', settori: 'bilanciato' },
+      pilota2: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1], timing: 'tardi', settori: 'bilanciato' }
     };
 
     /* Aspetta un click per procedere al segmento successivo */
@@ -5773,6 +5822,8 @@ function _renderRisultatoCheckpointQ(risultato, circuito) {
       nuovoBtnCP.parentNode.replaceChild(nuovoBtnFresh, nuovoBtnCP);
       nuovoBtnFresh.addEventListener('click', () => {
         audio.conferma();
+        _bonusQualificaAR1Acc += _calcolaBonusCheckpointDecisioni(_decisioniQualificaAR1,
+          { tipo: 'qualifica_ar1', circuito, meteo: motore.stato.statoQualificaAttivo?.meteoAttuale });
         const ris = motore.simulaQualificaAR1Checkpoint(_decisioniQualificaAR1);
         if (!ris) return;
         aggiornaWidgetMeteo(ris.meteoAttuale);
@@ -5816,6 +5867,12 @@ function _mostraGrigliaFinaleQualifica() {
   _appendClassificaQualifica(card, griglia, []);
   contenuto.appendChild(card);
 
+  /* Applica bonus checkpoint AR1 accumulato su Q1+Q2+Q3 */
+  if (_bonusQualificaAR1Acc !== 0) {
+    motore.stato.bonusFPCorrente = (motore.stato.bonusFPCorrente || 0) + _bonusQualificaAR1Acc;
+    _bonusQualificaAR1Acc = 0;
+  }
+
   el('btn-checkpoint-qualifica').classList.add('nascosta');
   el('btn-fine-qualifica').classList.remove('nascosta');
 
@@ -5840,6 +5897,483 @@ function _appendClassificaQualifica(contenitore, lista, eliminati) {
     ol.appendChild(li);
   });
   contenitore.appendChild(ol);
+}
+
+/* ============================================================
+   CHECKPOINT AR2/AR3 — helper comune bonus decisioni
+   ============================================================ */
+
+function _calcolaBonusCheckpointDecisioni(decisioni, { tipo, circuito, meteo }) {
+  let bonus = 0;
+  const usuraTipo  = circuito?.usuraGomme || 'media';
+  const usuraAlta  = ['alta', 'molto_alta'].includes(usuraTipo);
+  const usuraBassa = ['bassa', 'molto_bassa'].includes(usuraTipo);
+  const pioggia    = meteo?.pioggia || false;
+  const carico     = circuito?.caricoAero || 'medio';
+  const mescole    = circuito?.mescole || [];
+
+  if (tipo === 'qualifica_ar1') {
+    /* Timing: tardi = track evolution, presto = meno grip */
+    const p1 = decisioni.pilota1 || {};
+    const p2 = decisioni.pilota2 || {};
+    [p1, p2].forEach(d => {
+      if (d.timing === 'tardi')   bonus += 0.15;
+      else if (d.timing === 'presto') bonus -= 0.1;
+      /* Settori: trazione su circuiti lenti, alta velocità su circuiti veloci */
+      if (d.settori === 'trazione'    && ['alto', 'molto_alto'].includes(carico)) bonus += 0.1;
+      if (d.settori === 'alta_velocita' && ['basso', 'molto_basso'].includes(carico)) bonus += 0.1;
+    });
+  }
+
+  if (tipo === 'qualifica_ar2') {
+    const softestM = mescole.length > 0 ? mescole[mescole.length - 1] : null;
+    if (pioggia) {
+      if (decisioni.mescola === 'INTERMEDIA' || decisioni.mescola === 'FULL_WET') bonus += 0.5;
+    } else if (softestM && decisioni.mescola === softestM) {
+      bonus += 0.3;
+    }
+    if (decisioni.timing === 'tardi')  bonus += 0.4;
+    else if (decisioni.timing === 'presto') bonus -= 0.2;
+  }
+
+  if (tipo === 'gara_ar3') {
+    if (decisioni.ritmo === 'push' && usuraBassa && !pioggia) bonus += 0.6;
+    else if (decisioni.ritmo === 'push' && usuraAlta)  bonus -= 0.4;
+    else if (decisioni.ritmo === 'push' && pioggia)    bonus -= 0.5;
+    else if (decisioni.ritmo === 'conserva' && usuraAlta) bonus += 0.3;
+    else if (decisioni.ritmo === 'conserva' && usuraBassa) bonus -= 0.3;
+    if (decisioni.gestioneGomme === 'cautelosa' && usuraAlta)  bonus += 0.4;
+    else if (decisioni.gestioneGomme === 'aggressiva' && usuraBassa) bonus += 0.3;
+    else if (decisioni.gestioneGomme === 'aggressiva' && usuraAlta)  bonus -= 0.5;
+    else if (decisioni.gestioneGomme === 'cautelosa'  && usuraBassa) bonus -= 0.2;
+  }
+
+  if (tipo === 'gara_ar2_cp1') {
+    if (decisioni.ritmo === 'push' && usuraBassa)  bonus += 0.4;
+    else if (decisioni.ritmo === 'push' && usuraAlta) bonus -= 0.3;
+    else if (decisioni.ritmo === 'conserva' && usuraAlta) bonus += 0.3;
+    if (decisioni.sostaQuando === 'presto' && usuraAlta)  bonus += 0.4;
+    else if (decisioni.sostaQuando === 'tardi' && usuraBassa) bonus += 0.3;
+    else if (decisioni.sostaQuando === 'presto' && usuraBassa) bonus -= 0.2;
+  }
+
+  if (tipo === 'gara_ar2_cp2') {
+    if (decisioni.ritmo === 'push')    bonus += 0.2;
+    else if (decisioni.ritmo === 'conserva') bonus -= 0.2;
+    const softestM = mescole.length > 0 ? mescole[mescole.length - 1] : null;
+    if (softestM && decisioni.mescolaFinale === softestM) bonus += 0.3;
+  }
+
+  return Math.max(-2, Math.min(2, bonus));
+}
+
+/* ============================================================
+   QUALIFICA AR2 — 1 checkpoint (mescola + timing)
+   ============================================================ */
+
+function avviaQualificaAR2Checkpoint(circuito, meteo) {
+  const pannello = el('pannello-qualifica-ar1');
+  if (!pannello) return;
+
+  const meteoQ = motore.generaMeteoSessione(meteo);
+  const softestM = circuito.mescole[circuito.mescole.length - 1];
+  const decisioni = { mescola: softestM, timing: 'tardi' };
+
+  el('titolo-qualifica-ar1').textContent = 'Qualifiche — ' + circuito.nome;
+  el('desc-qualifica-ar1').textContent   = circuito.circuito + ', ' + circuito.paese;
+  mostraWidgetMeteo(meteoQ);
+  el('segmento-qualifica-ar1').textContent = 'Checkpoint 1 / 1 — Strategia giro veloce';
+
+  _renderDecisioniQualificaAR2(decisioni, circuito, meteoQ);
+
+  pannello.classList.remove('nascosta');
+  pannello.removeAttribute('aria-hidden');
+  ultimoFocusAperturaOverlay = document.activeElement;
+  el('titolo-qualifica-ar1').setAttribute('tabindex', '-1');
+  el('titolo-qualifica-ar1').focus();
+  audio.inizioSessione();
+
+  /* Binding checkpoint */
+  const btnCP = el('btn-checkpoint-qualifica');
+  btnCP.textContent = 'Conferma strategia →';
+  btnCP.classList.remove('nascosta');
+  const btnCPFresh = btnCP.cloneNode(true);
+  btnCP.parentNode.replaceChild(btnCPFresh, btnCP);
+  btnCPFresh.addEventListener('click', () => {
+    audio.conferma();
+    const bonus = _calcolaBonusCheckpointDecisioni(decisioni, { tipo: 'qualifica_ar2', circuito, meteo: meteoQ });
+    motore.stato.bonusFPCorrente = (motore.stato.bonusFPCorrente || 0) + bonus;
+    /* Simula qualifica e mappa tempi per la visualizzazione */
+    const griglia = motore.simulaQualifica(circuito, meteoQ);
+    griglia.forEach(r => { if (!r.tempoMiglioreFormattato) r.tempoMiglioreFormattato = r.tempoFormattato; });
+    el('segmento-qualifica-ar1').textContent = 'Griglia di partenza definitiva';
+    const contenuto = el('contenuto-qualifica-ar1');
+    contenuto.replaceChildren();
+    const card = crea('div', { class: 'card' });
+    card.appendChild(crea('h4', {}, 'Qualifiche concluse'));
+    _appendClassificaQualifica(card, griglia, []);
+    contenuto.appendChild(card);
+    btnCPFresh.classList.add('nascosta');
+    el('btn-fine-qualifica').classList.remove('nascosta');
+    const polePilota = griglia[0]?.pilota?.nome || '—';
+    annunciaVoiceOver('Qualifiche terminate. ' + polePilota + ' partirà dalla pole.');
+    audio.fineSessione();
+  });
+
+  /* Binding chiudi */
+  const btnFine = el('btn-fine-qualifica');
+  btnFine.classList.add('nascosta');
+  const btnFineFresh = btnFine.cloneNode(true);
+  btnFine.parentNode.replaceChild(btnFineFresh, btnFine);
+  btnFineFresh.addEventListener('click', () => {
+    audio.fineSessione();
+    nascondiWidgetMeteo();
+    pannello.classList.add('nascosta');
+    pannello.setAttribute('aria-hidden', 'true');
+    motore.avanzaFase();   /* qualifica → sprint o gara */
+    _routerPrincipale();
+  });
+
+  annunciaVoiceOver('Qualifiche AR2 — ' + circuito.nome + '. Scegli la strategia per il giro veloce.');
+}
+
+function _renderDecisioniQualificaAR2(decisioni, circuito, meteo) {
+  const contenuto = el('contenuto-qualifica-ar1');
+  contenuto.replaceChildren();
+
+  /* Contesto */
+  const cardCtx = crea('div', { class: 'card' });
+  cardCtx.appendChild(crea('h4', {}, 'Condizioni'));
+  const dlCtx = crea('dl', { class: 'lista-dati', 'aria-label': 'Condizioni sessione' });
+  [['Meteo', meteo.pioggia ? 'Pioggia' : 'Asciutto'], ['Temperatura pista', meteo.temperaturaPista + '°C']].forEach(([k, v]) => {
+    dlCtx.appendChild(crea('dt', {}, k)); dlCtx.appendChild(crea('dd', {}, v));
+  });
+  cardCtx.appendChild(dlCtx);
+  contenuto.appendChild(cardCtx);
+
+  /* Mescola */
+  const cardM = crea('div', { class: 'card margine-sopra' });
+  cardM.appendChild(crea('h4', {}, 'Mescola per il giro veloce'));
+  const gruppoM = crea('div', { class: 'gruppo-decisione-qualifica' });
+  const mescolaDisp = [...(circuito?.mescole || []), 'INTERMEDIA', 'FULL_WET'];
+  mescolaDisp.forEach(m => {
+    const mescola = DATI.MESCOLE[m];
+    const btn = crea('button', {
+      class: 'btn-gomma' + (decisioni.mescola === m ? ' selezionato' : ''),
+      'aria-label': (mescola ? mescola.nome : m) + (decisioni.mescola === m ? ', selezionata' : ''),
+      'aria-pressed': decisioni.mescola === m ? 'true' : 'false'
+    }, m);
+    btn.addEventListener('click', () => { decisioni.mescola = m; _renderDecisioniQualificaAR2(decisioni, circuito, meteo); });
+    gruppoM.appendChild(btn);
+  });
+  cardM.appendChild(gruppoM);
+  contenuto.appendChild(cardM);
+
+  /* Timing */
+  const cardT = crea('div', { class: 'card margine-sopra' });
+  cardT.appendChild(crea('h4', {}, 'Timing del giro veloce'));
+  const gruppoT = crea('div', { class: 'gruppo-decisione-qualifica' });
+  [{ v: 'presto', label: 'Inizio sessione' }, { v: 'centrale', label: 'A metà' }, { v: 'tardi', label: 'Fine sessione' }].forEach(({ v, label }) => {
+    const btn = crea('button', {
+      class: 'btn-decisione' + (decisioni.timing === v ? ' selezionato' : ''),
+      'aria-label': label + (decisioni.timing === v ? ', selezionato' : ''),
+      'aria-pressed': decisioni.timing === v ? 'true' : 'false'
+    }, label);
+    btn.addEventListener('click', () => { decisioni.timing = v; _renderDecisioniQualificaAR2(decisioni, circuito, meteo); });
+    gruppoT.appendChild(btn);
+  });
+  cardT.appendChild(gruppoT);
+  contenuto.appendChild(cardT);
+}
+
+/* ============================================================
+   GARA AR3 — 1 checkpoint (ritmo + gestione gomme)
+   ============================================================ */
+
+function avviaGaraAR3Checkpoint(circuito, meteo) {
+  const pannello = el('pannello-gara-ar1');
+  if (!pannello) return;
+
+  const meteoGara  = motore.generaMeteoSessione(meteo);
+  const decisioni  = { ritmo: 'normale', gestioneGomme: 'standard' };
+
+  el('titolo-gara-ar1').textContent = 'Gara — ' + circuito.nome;
+  el('desc-gara-ar1').textContent   = circuito.circuito + ', ' + circuito.paese;
+  mostraWidgetMeteo(meteoGara, 'gara');
+  el('stato-gara-ar1').replaceChildren();
+  el('eventi-gara-ar1').replaceChildren();
+
+  _renderDecisioniGaraAR3(decisioni, circuito, meteoGara);
+
+  pannello.classList.remove('nascosta');
+  pannello.removeAttribute('aria-hidden');
+  ultimoFocusAperturaOverlay = document.activeElement;
+  el('titolo-gara-ar1').setAttribute('tabindex', '-1');
+  el('titolo-gara-ar1').focus();
+  audio.inizioSessione();
+
+  /* Binding checkpoint */
+  const btnCP = el('btn-checkpoint-gara');
+  btnCP.textContent = 'Conferma strategia →';
+  btnCP.classList.remove('nascosta');
+  const btnCPFresh = btnCP.cloneNode(true);
+  btnCP.parentNode.replaceChild(btnCPFresh, btnCP);
+  btnCPFresh.addEventListener('click', () => {
+    audio.conferma();
+    const bonus = _calcolaBonusCheckpointDecisioni(decisioni, { tipo: 'gara_ar3', circuito, meteo: meteoGara });
+    motore.stato.bonusFPCorrente = (motore.stato.bonusFPCorrente || 0) + bonus;
+    const griglia = motore.stato.grigliaPartenza || motore.simulaQualificaAR3(circuito, meteoGara);
+    motore.simulaGara(circuito, meteoGara, griglia, {});
+    motore.aggiornaDeltaOttimizzazione();
+    _mostraFineGaraCheckpointAR23(circuito, meteoGara, pannello);
+  });
+
+  /* Binding fine gara */
+  const btnFine = el('btn-fine-gara');
+  btnFine.classList.add('nascosta');
+  const btnFineFresh = btnFine.cloneNode(true);
+  btnFine.parentNode.replaceChild(btnFineFresh, btnFine);
+  btnFineFresh.addEventListener('click', () => {
+    audio.fineSessione();
+    nascondiWidgetMeteo();
+    pannello.classList.add('nascosta');
+    pannello.setAttribute('aria-hidden', 'true');
+    apriPannelloSessionePostGara(circuito, meteoGara);
+  });
+
+  annunciaVoiceOver('Gara AR3 — ' + circuito.nome + '. Scegli ritmo e gestione pneumatici, poi conferma.');
+}
+
+function _renderDecisioniGaraAR3(decisioni, circuito, meteo) {
+  const contenuto = el('contenuto-gara-ar1');
+  contenuto.replaceChildren();
+
+  /* Contesto circuito */
+  const cardCtx = crea('div', { class: 'card' });
+  cardCtx.appendChild(crea('h4', {}, 'Condizioni di gara'));
+  const dl = crea('dl', { class: 'lista-dati', 'aria-label': 'Condizioni gara' });
+  [['Usura gomme', circuito.usuraGomme || 'media'], ['Meteo', meteo.pioggia ? 'Pioggia' : 'Asciutto'], ['Temperatura pista', meteo.temperaturaPista + '°C']].forEach(([k, v]) => {
+    dl.appendChild(crea('dt', {}, k)); dl.appendChild(crea('dd', {}, String(v)));
+  });
+  cardCtx.appendChild(dl);
+  contenuto.appendChild(cardCtx);
+
+  /* Ritmo */
+  const cardR = crea('div', { class: 'card margine-sopra' });
+  cardR.appendChild(crea('h4', {}, 'Ritmo di gara'));
+  const gruppoR = crea('div', { class: 'gruppo-decisione-qualifica' });
+  [{ v: 'push', label: 'Aggressivo' }, { v: 'normale', label: 'Bilanciato' }, { v: 'conserva', label: 'Conservativo' }].forEach(({ v, label }) => {
+    const btn = crea('button', {
+      class: 'btn-decisione' + (decisioni.ritmo === v ? ' selezionato' : ''),
+      'aria-label': label + (decisioni.ritmo === v ? ', selezionato' : ''),
+      'aria-pressed': decisioni.ritmo === v ? 'true' : 'false'
+    }, label);
+    btn.addEventListener('click', () => { decisioni.ritmo = v; _renderDecisioniGaraAR3(decisioni, circuito, meteo); });
+    gruppoR.appendChild(btn);
+  });
+  cardR.appendChild(gruppoR);
+  contenuto.appendChild(cardR);
+
+  /* Gestione gomme */
+  const cardG = crea('div', { class: 'card margine-sopra' });
+  cardG.appendChild(crea('h4', {}, 'Gestione pneumatici'));
+  const gruppoG = crea('div', { class: 'gruppo-decisione-qualifica' });
+  [{ v: 'aggressiva', label: 'Aggressiva' }, { v: 'standard', label: 'Standard' }, { v: 'cautelosa', label: 'Cautelosa' }].forEach(({ v, label }) => {
+    const btn = crea('button', {
+      class: 'btn-decisione' + (decisioni.gestioneGomme === v ? ' selezionato' : ''),
+      'aria-label': label + (decisioni.gestioneGomme === v ? ', selezionato' : ''),
+      'aria-pressed': decisioni.gestioneGomme === v ? 'true' : 'false'
+    }, label);
+    btn.addEventListener('click', () => { decisioni.gestioneGomme = v; _renderDecisioniGaraAR3(decisioni, circuito, meteo); });
+    gruppoG.appendChild(btn);
+  });
+  cardG.appendChild(gruppoG);
+  contenuto.appendChild(cardG);
+}
+
+/* ============================================================
+   GARA AR2 — 2 checkpoint (primo stint + secondo stint)
+   ============================================================ */
+
+function avviaGaraAR2Checkpoint(circuito, meteo) {
+  const pannello = el('pannello-gara-ar1');
+  if (!pannello) return;
+
+  const meteoGara = motore.generaMeteoSessione(meteo);
+  const softestM  = circuito.mescole[circuito.mescole.length - 1];
+  const cp1       = { ritmo: 'normale', sostaQuando: 'standard' };
+  const cp2       = { ritmo: 'push', mescolaFinale: softestM };
+  let   faseCP    = 1;
+
+  el('titolo-gara-ar1').textContent = 'Gara — ' + circuito.nome;
+  el('desc-gara-ar1').textContent   = circuito.circuito + ', ' + circuito.paese;
+  mostraWidgetMeteo(meteoGara, 'gara');
+  el('stato-gara-ar1').replaceChildren();
+  el('eventi-gara-ar1').replaceChildren();
+
+  _renderDecisioniGaraAR2(cp1, null, circuito, meteoGara, 1);
+
+  pannello.classList.remove('nascosta');
+  pannello.removeAttribute('aria-hidden');
+  ultimoFocusAperturaOverlay = document.activeElement;
+  el('titolo-gara-ar1').setAttribute('tabindex', '-1');
+  el('titolo-gara-ar1').focus();
+  audio.inizioSessione();
+
+  function rebindCheckpoint() {
+    const btnCP = el('btn-checkpoint-gara');
+    const btnCPFresh = btnCP.cloneNode(true);
+    btnCP.parentNode.replaceChild(btnCPFresh, btnCP);
+    btnCPFresh.addEventListener('click', () => {
+      audio.conferma();
+      if (faseCP === 1) {
+        /* Avanza a CP2 */
+        motore.stato.bonusFPCorrente = (motore.stato.bonusFPCorrente || 0) +
+          _calcolaBonusCheckpointDecisioni(cp1, { tipo: 'gara_ar2_cp1', circuito, meteo: meteoGara });
+        faseCP = 2;
+        btnCPFresh.textContent = 'Conferma secondo stint →';
+        _renderDecisioniGaraAR2(cp2, cp1, circuito, meteoGara, 2);
+        rebindCheckpoint();
+      } else {
+        /* Conferma finale: applica bonus CP2, simula, mostra risultati */
+        motore.stato.bonusFPCorrente = (motore.stato.bonusFPCorrente || 0) +
+          _calcolaBonusCheckpointDecisioni(cp2, { tipo: 'gara_ar2_cp2', circuito, meteo: meteoGara });
+        const griglia = motore.stato.grigliaPartenza || motore.simulaQualifica(circuito, meteoGara);
+        motore.simulaGara(circuito, meteoGara, griglia, {});
+        motore.aggiornaDeltaOttimizzazione();
+        _mostraFineGaraCheckpointAR23(circuito, meteoGara, pannello);
+      }
+    });
+    if (faseCP === 1) btnCPFresh.textContent = 'Conferma primo stint →';
+  }
+
+  const btnCP = el('btn-checkpoint-gara');
+  btnCP.textContent = 'Conferma primo stint →';
+  btnCP.classList.remove('nascosta');
+  rebindCheckpoint();
+
+  /* Binding fine gara */
+  const btnFine = el('btn-fine-gara');
+  btnFine.classList.add('nascosta');
+  const btnFineFresh = btnFine.cloneNode(true);
+  btnFine.parentNode.replaceChild(btnFineFresh, btnFine);
+  btnFineFresh.addEventListener('click', () => {
+    audio.fineSessione();
+    nascondiWidgetMeteo();
+    pannello.classList.add('nascosta');
+    pannello.setAttribute('aria-hidden', 'true');
+    apriPannelloSessionePostGara(circuito, meteoGara);
+  });
+
+  annunciaVoiceOver('Gara AR2 — ' + circuito.nome + '. Checkpoint 1 di 2: strategia primo stint.');
+}
+
+function _renderDecisioniGaraAR2(decisioni, cp1, circuito, meteo, numCP) {
+  const contenuto = el('contenuto-gara-ar1');
+  contenuto.replaceChildren();
+
+  el('titolo-gara-ar1').textContent = 'Gara — ' + circuito.nome + ' (Checkpoint ' + numCP + ' / 2)';
+
+  /* Contesto */
+  const cardCtx = crea('div', { class: 'card' });
+  cardCtx.appendChild(crea('h4', {}, numCP === 1 ? 'Primo stint' : 'Secondo stint'));
+  const dl = crea('dl', { class: 'lista-dati', 'aria-label': 'Condizioni gara' });
+  const voci = [['Usura gomme', circuito.usuraGomme || 'media'], ['Meteo', meteo.pioggia ? 'Pioggia' : 'Asciutto']];
+  if (numCP === 2 && cp1) voci.push(['Sosta pianificata', cp1.sostaQuando]);
+  voci.forEach(([k, v]) => { dl.appendChild(crea('dt', {}, k)); dl.appendChild(crea('dd', {}, String(v))); });
+  cardCtx.appendChild(dl);
+  contenuto.appendChild(cardCtx);
+
+  /* Ritmo */
+  const cardR = crea('div', { class: 'card margine-sopra' });
+  cardR.appendChild(crea('h4', {}, numCP === 1 ? 'Ritmo primo stint' : 'Ritmo secondo stint'));
+  const gruppoR = crea('div', { class: 'gruppo-decisione-qualifica' });
+  [{ v: 'push', label: 'Aggressivo' }, { v: 'normale', label: 'Bilanciato' }, { v: 'conserva', label: 'Conservativo' }].forEach(({ v, label }) => {
+    const btn = crea('button', {
+      class: 'btn-decisione' + (decisioni.ritmo === v ? ' selezionato' : ''),
+      'aria-label': label + (decisioni.ritmo === v ? ', selezionato' : ''),
+      'aria-pressed': decisioni.ritmo === v ? 'true' : 'false'
+    }, label);
+    btn.addEventListener('click', () => { decisioni.ritmo = v; _renderDecisioniGaraAR2(decisioni, cp1, circuito, meteo, numCP); });
+    gruppoR.appendChild(btn);
+  });
+  cardR.appendChild(gruppoR);
+  contenuto.appendChild(cardR);
+
+  /* CP1: quando sostare | CP2: mescola finale */
+  if (numCP === 1) {
+    const cardS = crea('div', { class: 'card margine-sopra' });
+    cardS.appendChild(crea('h4', {}, 'Strategia sosta'));
+    const gruppoS = crea('div', { class: 'gruppo-decisione-qualifica' });
+    [{ v: 'presto', label: 'Presto (giro 10-15)' }, { v: 'standard', label: 'Metà gara' }, { v: 'tardi', label: 'Tardi (giro 35+)' }].forEach(({ v, label }) => {
+      const btn = crea('button', {
+        class: 'btn-decisione' + (decisioni.sostaQuando === v ? ' selezionato' : ''),
+        'aria-label': label + (decisioni.sostaQuando === v ? ', selezionato' : ''),
+        'aria-pressed': decisioni.sostaQuando === v ? 'true' : 'false'
+      }, label);
+      btn.addEventListener('click', () => { decisioni.sostaQuando = v; _renderDecisioniGaraAR2(decisioni, cp1, circuito, meteo, numCP); });
+      gruppoS.appendChild(btn);
+    });
+    cardS.appendChild(gruppoS);
+    contenuto.appendChild(cardS);
+  } else {
+    const cardM = crea('div', { class: 'card margine-sopra' });
+    cardM.appendChild(crea('h4', {}, 'Mescola secondo stint'));
+    const gruppoM = crea('div', { class: 'gruppo-decisione-qualifica' });
+    const mescolaDisp = [...(circuito?.mescole || []), 'INTERMEDIA', 'FULL_WET'];
+    mescolaDisp.forEach(m => {
+      const mescola = DATI.MESCOLE[m];
+      const btn = crea('button', {
+        class: 'btn-gomma' + (decisioni.mescolaFinale === m ? ' selezionato' : ''),
+        'aria-label': (mescola ? mescola.nome : m) + (decisioni.mescolaFinale === m ? ', selezionata' : ''),
+        'aria-pressed': decisioni.mescolaFinale === m ? 'true' : 'false'
+      }, m);
+      btn.addEventListener('click', () => { decisioni.mescolaFinale = m; _renderDecisioniGaraAR2(decisioni, cp1, circuito, meteo, numCP); });
+      gruppoM.appendChild(btn);
+    });
+    cardM.appendChild(gruppoM);
+    contenuto.appendChild(cardM);
+  }
+}
+
+/* ============================================================
+   HELPER COMUNE — mostra classifica finale gara AR2/AR3
+   ============================================================ */
+
+function _mostraFineGaraCheckpointAR23(circuito, meteo, pannello) {
+  const risultati = motore.stato.ultimaGara?.risultati || [];
+
+  el('titolo-gara-ar1').textContent = 'Classifica finale — ' + circuito.nome;
+  el('stato-gara-ar1').replaceChildren();
+  el('eventi-gara-ar1').replaceChildren();
+
+  const contenuto = el('contenuto-gara-ar1');
+  contenuto.replaceChildren();
+
+  const card = crea('div', { class: 'card' });
+  card.appendChild(crea('h4', {}, 'Classifica gara'));
+  const top10 = risultati.slice(0, 10);
+  const ol = crea('ol', { class: 'lista-classifica', 'aria-label': 'Classifica gara finale' });
+  top10.forEach((r, idx) => {
+    const li = crea('li', {
+      class: 'riga-classifica' + (r.isGiocatore ? ' giocatore-highlight' : ''),
+      'aria-label': `${idx + 1}°: ${r.pilota?.nome || '—'} — ${r.puntiGuadagnati || 0} punti`
+    });
+    li.appendChild(crea('span', { class: 'posizione-classifica' + (idx < 3 ? ' podio' : '') }, String(idx + 1)));
+    li.appendChild(crea('span', { class: 'nome-classifica' }, r.pilota?.nome || '—'));
+    li.appendChild(crea('span', { class: 'punti-classifica' }, '+' + (r.puntiGuadagnati || 0)));
+    ol.appendChild(li);
+  });
+  card.appendChild(ol);
+  contenuto.appendChild(card);
+
+  el('btn-checkpoint-gara').classList.add('nascosta');
+  el('btn-fine-gara').classList.remove('nascosta');
+
+  const vincitore = risultati[0]?.pilota?.nome || '—';
+  annunciaVoiceOver('Gara terminata. ' + vincitore + ' vince.');
+  audio.fineSessione();
+  if (risultati.some(r => r.isGiocatore && r.posizione === 1)) audio.vittoria();
 }
 
 /* ============================================================
