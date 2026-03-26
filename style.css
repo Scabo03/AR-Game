@@ -1248,6 +1248,18 @@ body {
   color: var(--colore-relazioni);
 }
 
+/* Testo narrativo checkpoint gara */
+.narrativa-checkpoint {
+  font-size: var(--dim-corpo);
+  line-height: 1.6;
+  color: var(--testo-principale);
+  background-color: var(--sfondo-elemento);
+  border-left: 3px solid var(--colore-operazioni);
+  padding: var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+  border-radius: 0 var(--raggio) var(--raggio) 0;
+}
+
 /* Pannello decisioni pilota in gara */
 .pannello-pilota-gara {
   background-color: var(--sfondo-elemento);
