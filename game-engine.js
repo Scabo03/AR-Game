@@ -375,11 +375,8 @@ class MotoreGioco {
       .filter(p => p.squadra === squadraAssegnata.id)
       .map(p => JSON.parse(JSON.stringify(p)));
 
-    /* Assegna staff AR3 della squadra */
-    const staffAR3Base = DATI.STAFF_AR3[squadraAssegnata.id];
-    if (staffAR3Base) {
-      this.stato.staff = JSON.parse(JSON.stringify(staffAR3Base));
-    }
+    /* Staff senza nomi/statistiche individuali */
+    this.stato.staff = {};
 
     /* Genera classifica iniziale vuota */
     this._inizializzaClassifiche();
@@ -634,14 +631,11 @@ class MotoreGioco {
       return;
     }
 
-    /* Preparatore Atletico: mitiga calo umore piloti durante stagioni lunghe */
-    const pa = this.stato.staff?.preparatoreAtletico;
-    if (pa && Array.isArray(this.stato.piloti)) {
-      const fit = pa.statistiche?.fitness || pa.statistiche?.recupero || 65;
-      const bonusFit = Math.max(0, (fit - 65) / 200); /* 0..+0.175 per round */
+    /* Recupero umore piloti durante stagioni lunghe (fisso) */
+    if (Array.isArray(this.stato.piloti)) {
       this.stato.piloti.forEach(p => {
         if (typeof p.umore === 'number' && p.umore < 70) {
-          p.umore = Math.min(70, p.umore + bonusFit);
+          p.umore = Math.min(70, p.umore + 0.05);
         }
       });
     }
@@ -658,10 +652,7 @@ class MotoreGioco {
       });
       /* Nuovo infortunio: solo se nessun pilota è attualmente infortunato */
       if (!this.stato.pilotaInfortunato) {
-        const pa       = this.stato.staff?.preparatoreAtletico;
-        const fit      = pa?.statistiche?.fitness || pa?.statistiche?.recupero || 65;
-        const riduzione = Math.max(0, (fit - 65) / 140); /* 0..≈0.25 — fitness alta riduce la probabilità */
-        const prob     = 0.022 * (1 - riduzione); /* ~0.44 eventi/stagione per pilota senza protezione */
+        const prob = 0.022; /* ~0.44 eventi/stagione per pilota */
         for (const p of this.stato.piloti) {
           if (!p.infortunato && this.generatore.probabilita(prob)) {
             p.infortunato    = true;
@@ -675,14 +666,7 @@ class MotoreGioco {
       }
     }
 
-    /* Decrementa periodo adattamento per staff tecnico neoingaggiato */
-    ['capoIngegnere','direttoreAero','direttoreMeccanica','direttoreElettronica'].forEach(chiave => {
-      const m = this.stato.staff?.[chiave];
-      if (m?.adattamento?.roundRestanti > 0) {
-        m.adattamento.roundRestanti--;
-        if (m.adattamento.roundRestanti === 0) delete m.adattamento;
-      }
-    });
+    /* Periodo adattamento staff rimosso — staff non individuale */
 
     /* Evoluzione AI in-season: aggiornamenti ogni 4 round (solo AR1) */
     if (this.stato.categoria === 'AR1' && this.stato.roundCorrente % 4 === 0) {
@@ -885,14 +869,11 @@ class MotoreGioco {
   simulaSessioneFP(circuito, meteoSessione, programmaAllenamento) {
     /* programmaAllenamento: 'passo_gara' | 'qualifica' | 'aero' | 'meccanico' | 'gomme' | 'telemetria' */
     const g = this.generatore;
-    const qualitaDataAnalyst = this.stato.categoria === 'AR1'
-      ? (this.stato.staff?.dataAnalyst?.statistiche?.precisione || 70) / 100
-      : 0.65;
+    const qualitaDataAnalyst = this.stato.categoria === 'AR1' ? 0.75 : 0.65;
 
     /* Calcola qualità dati in base al programma scelto e al meteo */
     const penalitaMeteo = meteoSessione.pioggia ? 0.7 : 1.0;
-    const bonusDAQualifica = this.stato.direttiveStagione?.dataAnalyst === 'da_qualifica' ? 0.05 : 0;
-    let qualitaDati = 0.5 + (qualitaDataAnalyst * 0.3 * penalitaMeteo) + bonusDAQualifica;
+    let qualitaDati = 0.5 + (qualitaDataAnalyst * 0.3 * penalitaMeteo);
 
     /* Bonus per programma mirato */
     const bonusProgramma = {
@@ -998,7 +979,7 @@ class MotoreGioco {
     /* Il Data Analyst stima la performance relativa al benchmark */
     if (!this.stato.macchina) return;
     const g = this.generatore;
-    const precisione = this.stato.staff?.dataAnalyst?.statistiche?.precisione || 70;
+    const precisione = 75; /* valore fisso — staff non individuale */
 
     /* La conoscenza pre-stagionale abbassa il margine strutturale di incertezza.
        Senza test pre-stagionali il margine base è 2.5x più alto.
@@ -1010,7 +991,7 @@ class MotoreGioco {
     const moltiplicatoreKnowledge = conoscenzaMedia > 0
       ? Math.max(0.7, 1.5 - conoscenzaMedia)
       : 2.5;
-    const riduzMargine = this.stato.direttiveStagione?.dataAnalyst === 'da_sviluppo' ? 0.75 : 1;
+    const riduzMargine = 1;
     const margineErrore = Math.max(1, Math.round((1 - qualitaDati) * 12 * (1 - precisione / 200) * moltiplicatoreKnowledge * riduzMargine));
 
     if (!this.stato.stimaMacchina) {
@@ -1223,11 +1204,6 @@ class MotoreGioco {
         /* Degrado gomma */
         p.giriSullaGomma++;
         let tassoUsura = this._calcolaTassoUsura(p.gommaCorrente, circuito, meteoAttuale);
-        if (p.isGiocatore) {
-          const dUsura = this.stato.direttiveStagione || {};
-          if (dUsura.direttoreGara === 'dg_gomme') tassoUsura *= 0.95;
-          if (dUsura.dataAnalyst  === 'da_gara')   tassoUsura *= 0.97;
-        }
         p.usuraGomma = Math.min(100, p.usuraGomma + tassoUsura);
 
         /* Velocità relativa basata su usura gomma e SC/VSC */
@@ -1347,6 +1323,15 @@ class MotoreGioco {
     return false;
   }
 
+  _scegliMescolaOttimale(circuito, meteo, giriRimanenti) {
+    if (meteo.pioggia && meteo.intensitaPioggia > 50) return 'FULL_WET';
+    if (meteo.pioggia && meteo.intensitaPioggia > 15) return 'INTERMEDIA';
+    const mescole = circuito.mescole;
+    if (giriRimanenti > 25) return mescole[0];
+    if (giriRimanenti > 12) return mescole[1];
+    return mescole[2] || mescole[1] || mescole[0];
+  }
+
   _eseguiPitStop(partecipante, giro, circuito, meteo, g, eventi, isGiocatore, mescolaScelta) {
     /* Sceglie la mescola */
     const giriRimanenti = circuito.giri - giro;
@@ -1370,25 +1355,10 @@ class MotoreGioco {
       else if (meteo.pioggia && meteo.intensitaPioggia > 15) nuovaMescola = 'INTERMEDIA';
     }
 
-    /* Tempo pit stop */
-    const qualitaDirettoreGara = partecipante.isGiocatore
-      ? (this.stato.staff?.direttoreGara?.statistiche?.pitStop || 75) / 100
-      : 0.7 + g.prossimo() * 0.25;
-
-    /* Coordinatore Operativo: riduce tempi operativi in corsia box */
-    const coordOp = partecipante.isGiocatore ? this.stato.staff?.coordinatoreOperativo : null;
-    const bonusCoord = coordOp
-      ? Math.max(0, ((coordOp.statistiche?.efficienza || coordOp.statistiche?.coordinamento || 65) - 65) / 650)
-      : 0;
-
-    const dirPit = this.stato.direttiveStagione || {};
-    const bonusVelPit = partecipante.isGiocatore && dirPit.direttoreGara === 'dg_velocita' ? 0.3 : 0;
-    const probErrPit  = partecipante.isGiocatore && dirPit.direttoreGara === 'dg_precisione' ? 0.015 : 0.03;
-    const tempoBase = 22 + g.gaussiana(0, 0.5) - bonusVelPit; /* secondi */
-    const bonusStaff = (qualitaDirettoreGara - 0.7) * -5 - bonusCoord;
-    const rischio = g.probabilita(probErrPit) ? g.intervallo(2, 8) : 0; /* Errore pit stop */
-
-    const tempoPitStop = Math.round((tempoBase + bonusStaff + rischio) * 10) / 10;
+    /* Tempo pit stop — valori fissi, nessuna dipendenza da staff */
+    const tempoBase = 22 + g.gaussiana(0, 0.5);
+    const rischio = g.probabilita(0.025) ? g.intervallo(2, 8) : 0; /* ~2.5% errore pit */
+    const tempoPitStop = Math.round((tempoBase + rischio) * 10) / 10;
 
     partecipante.gommaCorrente = nuovaMescola;
     partecipante.usuraGomma = 0;
@@ -1619,8 +1589,7 @@ class MotoreGioco {
       gommaCorrente: circuito.mescole[circuito.mescole.length - 1], /* Soft di default */
       eliminatoQ1: false,
       eliminatoQ2: false,
-      penalitaGriglia: 0,
-      mandaInPista: true
+      penalitaGriglia: 0
     }));
 
     this.stato.statoQualificaAttivo = {
@@ -1666,7 +1635,6 @@ class MotoreGioco {
       const chiave = idx === 0 ? 'pilota1' : 'pilota2';
       const dec = decisioniGiocatore?.[chiave];
       if (dec?.gomma) p.gommaCorrente = dec.gomma;
-      p.mandaInPista = dec?.mandaInPista !== false;
     });
 
     /* Partecipanti attivi nel segmento corrente */
@@ -1678,8 +1646,6 @@ class MotoreGioco {
 
     /* Simula giro per ogni partecipante */
     attivi.forEach(p => {
-      const vaInPista = p.isGiocatore ? (p.mandaInPista !== false) : true;
-      if (!vaInPista) return;
 
       const perfVettura = this._calcolaPerformanceVettura(p.squadraId, circuito);
       const perfPilota  = this._calcolaPerformanzaPilota(p.pilota, circuito, sq.meteoAttuale);
@@ -1721,13 +1687,31 @@ class MotoreGioco {
         const eliminati = ordinati.slice(15);
         eliminati.forEach(p => { p.eliminatoQ1 = true; });
         risultato.eliminati = eliminati;
+        risultato.tuttiGiocatoriEliminati = pilotiGiocatore.every(p => p.eliminatoQ1);
       } else if (sq.segmentoCorrente === 2) {
         const eliminati = ordinati.slice(10);
         eliminati.forEach(p => { p.eliminatoQ2 = true; });
         risultato.eliminati = eliminati;
+        risultato.tuttiGiocatoriEliminati = pilotiGiocatore.every(p => p.eliminatoQ1 || p.eliminatoQ2);
       } else {
         this._finalizzaQualificaAR1();
         risultato.eConclusaQualifica = true;
+      }
+
+      /* Se tutti i piloti del giocatore sono eliminati, finalizza subito */
+      if (risultato.tuttiGiocatoriEliminati && sq.segmentoCorrente < 3) {
+        /* Simula i segmenti rimanenti senza decisioni giocatore */
+        while (sq.segmentoCorrente < 3 && !sq.conclusa) {
+          sq.segmentoCorrente++;
+          sq.checkpointCorrente = 1;
+          this.simulaQualificaAR1Checkpoint({});
+        }
+        if (!sq.conclusa) {
+          this._finalizzaQualificaAR1();
+        }
+        risultato.eConclusaQualifica = true;
+        this.salva();
+        return risultato;
       }
 
       if (sq.segmentoCorrente < 3) {
@@ -1852,12 +1836,14 @@ class MotoreGioco {
 
     /* Applica decisioni ritmo e pit pianificati */
     if (decisioniGiocatore) {
-      const molt = { push: 1.015, normale: 1.0, conserva: 0.985 };
+      const molt = { push: 1.025, normale: 1.0, conserva: 0.99 };
+      const usuraMolt = { push: 1.25, normale: 1.0, conserva: 0.80 };
       sg.partecipanti.filter(p => p.isGiocatore).forEach((p, idx) => {
         const chiave = idx === 0 ? 'pilota1' : 'pilota2';
         const dec = decisioniGiocatore[chiave];
         if (!dec) return;
         p.fattoreRitmoGiocatore = molt[dec.ritmo] || 1.0;
+        p.fattoreUsuraGiocatore = usuraMolt[dec.ritmo] || 1.0;
         if (dec.pitStop) p.pitPianificato = dec.pitStop;
       });
     }
@@ -1933,11 +1919,23 @@ class MotoreGioco {
         }
       });
 
-      /* Pit stop pianificato giocatore */
+      /* Pit stop pianificato giocatore + auto-pit d'emergenza se usura critica */
       sg.partecipanti.filter(p => p.isGiocatore && !p.ritiro).forEach(p => {
+        const giriRimasti = sg.giriTotali - giro;
+        const usuraCritica = p.usuraGomma >= 80;
+        const nessunaFermata = p.fermateEffettuate === 0;
+        const pocoTempoAllaFine = giriRimasti < 8;
+        /* Auto-pit se usura critica o nessuna fermata vicino alla fine */
+        const autoPit = (usuraCritica && !p.pitPianificato) ||
+                        (nessunaFermata && pocoTempoAllaFine && !p.pitPianificato);
         if (p.pitPianificato && p.pitPianificato.giro === giro) {
           this._eseguiPitStop(p, giro, circuito, sg.meteoAttuale, g, eventiCheckpoint, true, p.pitPianificato.mescola);
           p.pitPianificato = null;
+        } else if (autoPit) {
+          /* Sceglie la mescola ottimale per i giri rimanenti */
+          const mescolaAuto = this._scegliMescolaOttimale(circuito, sg.meteoAttuale, giriRimasti);
+          this._eseguiPitStop(p, giro, circuito, sg.meteoAttuale, g, eventiCheckpoint, true, mescolaAuto);
+          eventiCheckpoint.push({ giro, tipo: 'pit_stop', descrizione: `${p.pilota?.nome || 'Pilota'} — sosta tecnica automatica.` });
         }
       });
 
@@ -1945,10 +1943,8 @@ class MotoreGioco {
       sg.partecipanti.filter(p => !p.ritiro).forEach(p => {
         p.giriSullaGomma++;
         let tassoUsura = this._calcolaTassoUsura(p.gommaCorrente, circuito, sg.meteoAttuale);
-        if (p.isGiocatore) {
-          const dUsura2 = this.stato.direttiveStagione || {};
-          if (dUsura2.direttoreGara === 'dg_gomme') tassoUsura *= 0.95;
-          if (dUsura2.dataAnalyst  === 'da_gara')   tassoUsura *= 0.97;
+        if (p.isGiocatore && p.fattoreUsuraGiocatore) {
+          tassoUsura *= p.fattoreUsuraGiocatore;
         }
         p.usuraGomma = Math.min(100, p.usuraGomma + tassoUsura);
 
@@ -2051,7 +2047,7 @@ class MotoreGioco {
     const idx        = this.stato.roundCorrente;
     const corrente   = calendario[idx - 1];
     const prossimo   = calendario[idx];
-    const efficienza = (this.stato.staff?.direttoreLogistica?.statistiche?.efficienza || 65) / 100;
+    const efficienza = 0.65; /* valore fisso — staff non individuale */
     const costoBase  = 480000;
     const costo      = Math.round(costoBase * (1.4 - efficienza * 0.8));
 
@@ -2151,13 +2147,6 @@ class MotoreGioco {
     else if (migliorePosizione <= 10) deltaMedia = 3;
     else deltaMedia = -2;
 
-    /* Social Media Manager: amplifica reputazione mediatica dopo ogni gara */
-    const smm = this.stato.staff?.socialMediaManager;
-    if (smm) {
-      const com = smm.statistiche?.comunicazione || smm.statistiche?.carisma || 65;
-      deltaMedia += Math.max(0, Math.round((com - 65) / 10));
-    }
-
     this.stato.reputazione.performance = Math.min(10000,
       Math.max(0, this.stato.reputazione.performance + deltaPerf));
     this.stato.reputazione.mediatica = Math.min(10000,
@@ -2194,10 +2183,7 @@ class MotoreGioco {
     if (!this.stato.macchina.hasOwnProperty(tipo)) return false;
 
     const valoreAttuale = this.stato.macchina[tipo];
-    /* Responsabile Comunicazione Tecnica: piccolo bonus al coordinamento inter-dipartimentale */
-    const rc = this.stato.staff?.responsabileComunicazione;
-    const bonusRC = rc ? Math.max(0, ((rc.statistiche?.comunicazione || rc.statistiche?.coordinamento || 65) - 65) / 1200) : 0;
-    const incremento = Math.min(entita * (1 + bonusRC), (100 - valoreAttuale) * 0.8);
+    const incremento = Math.min(entita, (100 - valoreAttuale) * 0.8);
     this.stato.macchina[tipo] = Math.round((valoreAttuale + incremento) * 10) / 10;
 
     /* Aggiorna reputazione tecnica (aggiornaReputazione chiama già this.salva()) */
@@ -2373,7 +2359,7 @@ class MotoreGioco {
       const squadraAssegnata = DATI.SQUADRE_AR1[DATI.SQUADRE_AR1.length - 2]; /* Penultima della griglia */
       this.stato.squadraId = squadraAssegnata.id;
       this.stato.macchina = { ...squadraAssegnata.macchina };
-      this.stato.staff = JSON.parse(JSON.stringify(squadraAssegnata.staffBase));
+      this.stato.staff = {}; /* staff senza nomi/statistiche individuali */
       this.stato.budget = squadraAssegnata.budget * 0.8; /* Stagione già iniziata */
       this.stato.budgetSpeso = 0;
 
@@ -2391,11 +2377,8 @@ class MotoreGioco {
       this.stato.piloti = DATI.PILOTI_AR2
         .filter(p => p.squadra === squadraAR2.id)
         .map(p => JSON.parse(JSON.stringify(p)));
-      /* Staff AR2 */
-      const staffAR2Base = DATI.STAFF_AR2[squadraAR2.id];
-      if (staffAR2Base) {
-        this.stato.staff = JSON.parse(JSON.stringify(staffAR2Base));
-      }
+      /* Staff senza nomi/statistiche individuali */
+      this.stato.staff = {};
       /* Reset sviluppo AR2 */
       this.stato.sviluppoAR2 = { aero: 0, meccanica: 0 };
       this.stato.pianoUpgradeAR2 = [];
@@ -3048,62 +3031,14 @@ class MotoreGioco {
     const subSeed = ((this.stato.seedStagione || 12345) + this.stato.roundCorrente * 1997) | 0;
     const g = new GeneratoreCasuale(subSeed);
     const round = this.stato.roundCorrente;
-    const staff = this.stato.staff || {};
-
-    /* Bonus direttore: innovazione alta → impatto maggiore; precisione alta → consegna più rapida */
-    const dir = this.stato.direttiveStagione || {};
-    const capAdapt = dir.capoIngegnere === 'ci_adattamento' ? 5 : 8;
-    const _bonusDirettore = (direttore) => {
-      if (!direttore?.statistiche) return { impatto: 0, roundAnticipo: 0 };
-      let inn = direttore.statistiche.innovazione || 75;
-      /* Adattamento neoingaggio: rendimento ridotto nelle prime settimane */
-      if (direttore.adattamento?.roundRestanti > 0) {
-        const roundEff = Math.min(direttore.adattamento.roundRestanti, capAdapt);
-        const fattore  = 0.70 + 0.30 * ((capAdapt - roundEff) / capAdapt);
-        inn = Math.round(inn * fattore);
-      }
-      const prec = direttore.statistiche.precisione || 75;
-      return {
-        impatto: inn >= 90 ? 2 : inn >= 85 ? 1 : inn < 70 ? -1 : 0,
-        roundAnticipo: prec >= 88 ? 1 : 0
-      };
-    };
-
-    /* Bonus Capo Ingegnere: coordinamento alto → +1 a tutti i dipartimenti */
-    const bonusCI = (staff.capoIngegnere?.statistiche?.coordinamento || 75) >= 88 ? 1 : 0;
-
-    /* Direttive stagionali — bonus Capo Ingegnere e Direttori Design */
-    const subGDir = new GeneratoreCasuale((subSeed + 131) | 0); /* RNG separato per varianza */
-    let dBonusCI = { aero: 0, mec: 0, ele: 0 };
-    if      (dir.capoIngegnere === 'ci_bilanciamento') { dBonusCI = { aero: 1, mec: 1, ele: 1 }; }
-    else if (dir.capoIngegnere === 'ci_spec_aero')     { dBonusCI.aero = 3; }
-
-    let dExtraAero = 0, dVarAero = 0;
-    if      (dir.direttoreAero === 'aero_aggressivo')   { dExtraAero = 3; dVarAero = subGDir.intervallo(-2, 2); }
-    else if (dir.direttoreAero === 'aero_conservativo') { dExtraAero = 2; }
-    else if (dir.direttoreAero === 'aero_bilanciato')   { dExtraAero = 1; dBonusCI.mec += 1; }
-
-    let dExtraMec = 0, dVarMec = 0;
-    if      (dir.direttoreMeccanica === 'mec_aggressivo')   { dExtraMec = 3; dVarMec = subGDir.intervallo(-2, 2); }
-    else if (dir.direttoreMeccanica === 'mec_conservativo') { dExtraMec = 2; }
-    else if (dir.direttoreMeccanica === 'mec_bilanciato')   { dExtraMec = 1; dBonusCI.ele += 1; }
-
-    let dExtraEle = 0, dVarEle = 0;
-    if      (dir.direttoreElettronica === 'ele_aggressivo')   { dExtraEle = 3; dVarEle = subGDir.intervallo(-2, 2); }
-    else if (dir.direttoreElettronica === 'ele_conservativo') { dExtraEle = 2; }
-    else if (dir.direttoreElettronica === 'ele_focus_pu')     { dExtraEle = 1; }
-
-    const bAero = _bonusDirettore(staff.direttoreAero);
-    const bMec  = _bonusDirettore(staff.direttoreMeccanica);
-    const bEle  = _bonusDirettore(staff.direttoreElettronica);
 
     const baseAero = g.intervallo(2, 5);
     const baseMec  = g.intervallo(1, 4);
     const baseEle  = g.intervallo(1, 3);
 
-    const roundAero = round + Math.max(1, g.intervallo(2, 4) - bAero.roundAnticipo);
-    const roundMec  = round + Math.max(1, g.intervallo(1, 3) - bMec.roundAnticipo);
-    const roundEle  = round + Math.max(1, g.intervallo(1, 2) - bEle.roundAnticipo);
+    const roundAero = round + Math.max(1, g.intervallo(2, 4));
+    const roundMec  = round + Math.max(1, g.intervallo(1, 3));
+    const roundEle  = round + Math.max(1, g.intervallo(1, 2));
 
     return [
       {
@@ -3111,33 +3046,27 @@ class MotoreGioco {
         titolo: 'Pacchetto aerodinamico',
         descrizione: 'Fondo piatto rivisto e deflettori laterali aggiornati. Migliore efficienza nelle curve veloci.',
         dipartimento: 'aerodinamica',
-        impatto: Math.max(1, baseAero + bAero.impatto + bonusCI + dBonusCI.aero + dExtraAero + dVarAero),
+        impatto: Math.max(1, baseAero),
         costo: g.intervallo(8000000, 14000000),
-        roundConsegna: roundAero,
-        nomeDirettore: staff.direttoreAero?.nome || null,
-        innovazioneDirettore: staff.direttoreAero?.statistiche?.innovazione || null
+        roundConsegna: roundAero
       },
       {
         id: 'meccanica',
         titolo: 'Aggiornamento sospensioni',
         descrizione: 'Nuova geometria sospensione anteriore. Bilanciamento meccanico migliorato in frenata.',
         dipartimento: 'meccanica',
-        impatto: Math.max(1, baseMec + bMec.impatto + bonusCI + dBonusCI.mec + dExtraMec + dVarMec),
+        impatto: Math.max(1, baseMec),
         costo: g.intervallo(5000000, 10000000),
-        roundConsegna: roundMec,
-        nomeDirettore: staff.direttoreMeccanica?.nome || null,
-        innovazioneDirettore: staff.direttoreMeccanica?.statistiche?.innovazione || null
+        roundConsegna: roundMec
       },
       {
         id: 'elettronica',
         titolo: 'Software ERS aggiornato',
         descrizione: 'Ottimizzazione algoritmo gestione energia. Maggiore recupero in decelerazione.',
         dipartimento: 'elettronica',
-        impatto: Math.max(1, baseEle + bEle.impatto + bonusCI + dBonusCI.ele + dExtraEle + dVarEle),
+        impatto: Math.max(1, baseEle),
         costo: g.intervallo(3000000, 7000000),
-        roundConsegna: roundEle,
-        nomeDirettore: staff.direttoreElettronica?.nome || null,
-        innovazioneDirettore: staff.direttoreElettronica?.statistiche?.innovazione || null
+        roundConsegna: roundEle
       }
     ];
   }
@@ -3324,8 +3253,7 @@ class MotoreGioco {
     if (pu.tokenDisponibili <= 0) return { errore: 'Nessun token disponibile per questa stagione' };
 
     const g = this.generatore;
-    const bonusPU = this.stato.direttiveStagione?.direttoreElettronica === 'ele_focus_pu' ? 1 : 0;
-    const incremento = g.intervallo(2, 5) + bonusPU;
+    const incremento = g.intervallo(2, 5);
     this.stato.tokenUsati = (this.stato.tokenUsati || 0) + 1;
     this.applicaUpgrade('powerUnit', incremento);
     return { successo: true, incremento };
@@ -4355,14 +4283,12 @@ class MotoreGioco {
     }
 
     const g = this.generatore;
-    const ri = this.stato.staff?.responsabileRelazioni;
-    const qualitàRI = ri?.statistiche?.negoziazione || ri?.statistiche?.relazioni || 65;
     const roundAvvio  = this.stato.roundCorrente;
     const roundRivela = roundAvvio + g.intervallo(3, 8);
 
-    /* Probabilità di successo modulata dalla qualità del RI */
+    /* Probabilità di successo fissa — staff non individuale */
     const probBase = { proroga_era: 0.45, chiarimento_tecnico: 0.70, modifica_regolamentare: 0.25 };
-    const probSuccesso = Math.min(0.95, (probBase[tipo] || 0.5) * (0.6 + (qualitàRI / 100) * 0.8));
+    const probSuccesso = probBase[tipo] || 0.5;
     const successo = g.probabilita(probSuccesso);
 
     const TESTI_ATTESA = {
@@ -4477,26 +4403,8 @@ class MotoreGioco {
   }
 
   avviaIncontroIndividuale(chiaveStaff) {
-    if (this.stato.categoria !== 'AR1') return { successo: false, messaggio: 'Non disponibile.' };
-    const round = this.stato.roundCorrente;
-    if ((this.stato.incontriStaffRound || {})[chiaveStaff] === round) {
-      return { successo: false, messaggio: 'Incontro già effettuato con questa figura in questo round.' };
-    }
-
-    const membro = this.stato.staff?.[chiaveStaff];
-    if (!membro) return { successo: false, messaggio: 'Figura non trovata.' };
-
-    const g = this.generatore;
-    const bonus = g.intervallo(4, 8);
-    membro.motivazioneBonus = Math.min(30, ((membro.motivazioneBonus || 0) + bonus));
-
-    this.stato.incontriStaffRound = this.stato.incontriStaffRound || {};
-    this.stato.incontriStaffRound[chiaveStaff] = round;
-    this.salva();
-    return {
-      successo: true,
-      messaggio: `Incontro individuale con ${membro.nome || chiaveStaff}. Motivazione personale migliorata.`
-    };
+    /* Gestione staff individuale rimossa */
+    return { successo: false, messaggio: 'Gestione staff non disponibile.' };
   }
 
   /* ----------------------------------------------------------
@@ -4531,12 +4439,8 @@ class MotoreGioco {
       return { successo: false, messaggio: 'Budget insufficiente per organizzare l\'evento.' };
     }
 
-    /* Qualità Responsabile Hospitality amplifica l'effetto */
-    const hosp = this.stato.staff?.responsabileHospitality;
-    const qualHosp = hosp?.statistiche?.relazioni || hosp?.statistiche?.carisma || 65;
     const g = this.generatore;
-    const bonusBase = g.intervallo(5, 8);
-    const bonus = Math.round(bonusBase * (0.7 + qualHosp / 333));
+    const bonus = g.intervallo(5, 8);
 
     (this.stato.sponsor || []).filter(s => s.attivo).forEach(s => {
       s.soddisfazione = Math.min(100, (s.soddisfazione || 50) + bonus);
@@ -4839,37 +4743,15 @@ class MotoreGioco {
   ottieniRaccomandazioneConcept() {
     if (this.stato.categoria !== 'AR1') return null;
     if (!this._rilevaChangEra()) return null;
-    const ce = this.stato.staff?.capoIngegnere;
-    if (!ce) return null;
 
-    const coord = ce.statistiche?.coordinamento || 70;
-    const innov = ce.statistiche?.innovazione   || 70;
-
-    let conceptId, motivazione, profiloLabel;
-
-    if (innov >= 76 && coord < 80) {
-      profiloLabel = 'orientamento innovativo';
-      conceptId    = innov >= 82 ? 'innovativo' : 'carico_max';
-      motivazione  = ce.nome + ' privilegia approcci tecnici non convenzionali. '
-                   + 'Sulla base dell\'analisi del nuovo regolamento tecnico, raccomanda un concept ad alto potenziale. '
-                   + 'Il rischio di esecuzione è elevato, ma il margine di guadagno sulla concorrenza può essere significativo.';
-    } else if (coord >= 80) {
-      profiloLabel = 'orientamento conservativo';
-      conceptId    = coord >= 86 ? 'bilanciato_era' : 'efficienza';
-      motivazione  = ce.nome + ' predilige lo sviluppo strutturato e controllato. '
-                   + 'Raccomanda un concept che minimizzi l\'incertezza nella fase di avvio della nuova era, '
-                   + 'privilegiando una base tecnica solida su cui costruire lo sviluppo stagionale.';
-    } else {
-      profiloLabel = 'orientamento bilanciato';
-      conceptId    = innov >= 72 ? 'rake_basso' : 'efficienza';
-      motivazione  = ce.nome + ' propone un approccio equilibrato tra rendimento immediato e stabilità tecnica. '
-                   + 'Il concept scelto offre una base versatile con incertezza contenuta, adatta a qualsiasi tipologia di circuito.';
-    }
-
-    /* Sigma ridotta se il giocatore segue la raccomandazione: proporzionale a coordinamento */
-    const bonusSigmaRiduzione = Math.min(0.45, Math.max(0, (coord - 60) / 67));
-
-    return { conceptId, motivazione, profiloLabel, bonusSigmaRiduzione, nomeCE: ce.nome };
+    /* Raccomandazione fissa dello staff tecnico (senza nomi individuali) */
+    return {
+      conceptId: 'bilanciato_era',
+      motivazione: 'Lo staff tecnico raccomanda un concept bilanciato per l\'avvio della nuova era regolamentare. Base solida con incertezza contenuta.',
+      profiloLabel: 'orientamento bilanciato',
+      bonusSigmaRiduzione: 0.25,
+      nomeCE: 'Staff tecnico'
+    };
   }
 
   /* Applica il concept scelto agli attributi della macchina */
@@ -5175,68 +5057,15 @@ class MotoreGioco {
   ---------------------------------------------------------- */
 
   ottieniDirettiveStagione() {
-    if (this.stato.categoria !== 'AR1') return null;
-    const sel   = this.stato.direttiveStagione || {};
-    const staff = this.stato.staff || {};
-    return {
-      selezioni: sel,
-      figure: [
-        {
-          chiave: 'capoIngegnere', nome: staff.capoIngegnere?.nome || null, presente: !!staff.capoIngegnere,
-          opzioni: [
-            { id: 'ci_bilanciamento', label: 'Bilanciamento',               effetto: '+1 impatto su tutti gli upgrade durante la stagione.' },
-            { id: 'ci_spec_aero',     label: 'Specializzazione aerodinamica', effetto: 'Upgrade aerodinamica +3 impatto base.' },
-            { id: 'ci_adattamento',   label: 'Integrazione rapida',          effetto: 'Il periodo di adattamento del nuovo staff tecnico si riduce da 8 a 5 round.' }
-          ]
-        },
-        {
-          chiave: 'direttoreGara', nome: staff.direttoreGara?.nome || null, presente: !!staff.direttoreGara,
-          opzioni: [
-            { id: 'dg_velocita',   label: 'Velocità pit stop',     effetto: 'Tempo stimato in corsia box ridotto di circa 0,3 secondi.' },
-            { id: 'dg_precisione', label: 'Precisione operativa',  effetto: 'Probabilità di errore in pit stop dimezzata.' },
-            { id: 'dg_gomme',      label: 'Gestione gomme',        effetto: 'Tasso di usura delle gomme ridotto del 5% per giro.' }
-          ]
-        },
-        {
-          chiave: 'dataAnalyst', nome: staff.dataAnalyst?.nome || null, presente: !!staff.dataAnalyst,
-          opzioni: [
-            { id: 'da_qualifica', label: 'Focus qualifica', effetto: 'Qualità dei dati nelle prove libere aumentata del 5%.' },
-            { id: 'da_sviluppo',  label: 'Focus sviluppo',  effetto: 'Margine di errore nelle stime macchina ridotto del 25%.' },
-            { id: 'da_gara',      label: 'Focus gara',      effetto: 'Tasso di degrado gomme ridotto del 3% durante la gara.' }
-          ]
-        },
-        {
-          chiave: 'direttoreAero', nome: staff.direttoreAero?.nome || null, presente: !!staff.direttoreAero,
-          opzioni: [
-            { id: 'aero_aggressivo',   label: 'Sviluppo aggressivo',   effetto: 'Upgrade aerodinamica +3 impatto base con varianza ±2.' },
-            { id: 'aero_conservativo', label: 'Sviluppo conservativo', effetto: 'Upgrade aerodinamica +2 impatto stabile, senza varianza.' },
-            { id: 'aero_bilanciato',   label: 'Approccio bilanciato',  effetto: 'Aerodinamica +1 e meccanica +1 impatto base.' }
-          ]
-        },
-        {
-          chiave: 'direttoreMeccanica', nome: staff.direttoreMeccanica?.nome || null, presente: !!staff.direttoreMeccanica,
-          opzioni: [
-            { id: 'mec_aggressivo',   label: 'Sviluppo aggressivo',   effetto: 'Upgrade meccanica +3 impatto base con varianza ±2.' },
-            { id: 'mec_conservativo', label: 'Sviluppo conservativo', effetto: 'Upgrade meccanica +2 impatto stabile, senza varianza.' },
-            { id: 'mec_bilanciato',   label: 'Approccio bilanciato',  effetto: 'Meccanica +1 e elettronica +1 impatto base.' }
-          ]
-        },
-        {
-          chiave: 'direttoreElettronica', nome: staff.direttoreElettronica?.nome || null, presente: !!staff.direttoreElettronica,
-          opzioni: [
-            { id: 'ele_aggressivo',   label: 'Sviluppo aggressivo',   effetto: 'Upgrade elettronica +3 impatto base con varianza ±2.' },
-            { id: 'ele_conservativo', label: 'Sviluppo conservativo', effetto: 'Upgrade elettronica +2 impatto stabile, senza varianza.' },
-            { id: 'ele_focus_pu',     label: 'Sinergia power unit',   effetto: 'Elettronica +1 impatto base. Ogni token PU usato guadagna +1 punto aggiuntivo.' }
-          ]
-        }
-      ]
-    };
+    /* Direttive staff rimosse — staff non individuale */
+    return null;
   }
 
   impostaDirettiva(chiave, opzioneId) {
+    /* Direttive staff rimosse — staff non individuale */
+    return { ok: false, messaggio: 'Funzione non disponibile.' };
     if (this.stato.categoria !== 'AR1') return { ok: false, messaggio: 'Disponibile solo in AR1.' };
     if (this.stato.faseCorrente !== 'pausa_invernale') return { ok: false, messaggio: 'Le direttive si impostano durante la pausa invernale.' };
-    if (!this.stato.staff?.[chiave]) return { ok: false, messaggio: 'Figura staff non presente in squadra.' };
     if (!this.stato.direttiveStagione) this.stato.direttiveStagione = {};
     this.stato.direttiveStagione[chiave] = opzioneId;
     this.salva();
@@ -5360,67 +5189,15 @@ class MotoreGioco {
   }
 
   ottieniOpzioniRinnovoStaff(chiave) {
-    /* Restituisce le 2 opzioni di rinnovo disponibili per un membro dello staff.
-       Disponibile solo in pausa_invernale. */
-    if (this.stato.categoria !== 'AR1') return null;
-    const m = this.stato.staff?.[chiave];
-    if (!m || !m.contratto) return null;
-
-    const stipBase   = m.contratto.stipendio || 0;
-    const baseScad   = Math.max(m.contratto.scadenza || this.stato.stagione, this.stato.stagione);
-    const budgetDisp = this.stato.budget - (this.stato.budgetSpeso || 0);
-
-    return [
-      {
-        id:          'breve',
-        label:       'Rinnovo breve',
-        durata:      1,
-        stipendio:   stipBase,
-        costoTotale: stipBase,
-        scadenza:    baseScad + 1,
-        descrizione: '1 stagione. Stipendio invariato.',
-        fattibile:   budgetDisp >= stipBase
-      },
-      {
-        id:          'lungo',
-        label:       'Rinnovo lungo',
-        durata:      2,
-        stipendio:   Math.round(stipBase * 1.15),
-        costoTotale: Math.round(stipBase * 1.15 * 2),
-        scadenza:    baseScad + 2,
-        descrizione: '2 stagioni. Stipendio +15% per la stabilità pluriennale.',
-        fattibile:   budgetDisp >= Math.round(stipBase * 1.15 * 2)
-      }
-    ];
+    return null; /* Gestione staff rimossa */
   }
 
   rinnovaContrattoStaff(chiave, opzioneId) {
-    if (this.stato.faseCorrente !== 'pausa_invernale') return { ok: false, messaggio: 'Il mercato è chiuso.' };
-    const m = this.stato.staff?.[chiave];
-    if (!m) return { ok: false, messaggio: 'Nessun membro da rinnovare.' };
-
-    const opzioni = this.ottieniOpzioniRinnovoStaff(chiave);
-    const opzione = opzioni?.find(o => o.id === opzioneId);
-    if (!opzione) return { ok: false, messaggio: 'Opzione di rinnovo non valida.' };
-    if (!opzione.fattibile) return { ok: false, messaggio: 'Budget insufficiente per questo rinnovo.' };
-
-    const ok = this.registraSpesa('staff', opzione.costoTotale, 'Rinnovo ' + m.nome + ' (' + opzione.durata + ' ann' + (opzione.durata === 1 ? 'o' : 'i') + ')');
-    if (!ok) return { ok: false, messaggio: 'Budget insufficiente.' };
-
-    m.contratto.scadenza  = opzione.scadenza;
-    m.contratto.stipendio = opzione.stipendio;
-    this.salva();
-    return {
-      ok:       true,
-      scadenza: opzione.scadenza,
-      stipendio: opzione.stipendio,
-      messaggio: m.nome + ' rinnovato fino alla stagione ' + opzione.scadenza + '.'
-    };
+    return { ok: false, messaggio: 'Gestione staff non disponibile.' };
   }
 
-  /* Alias retrocompatibile usato da test e UI precedenti */
   rinnovaContrattoStaffAR1(chiave) {
-    return this.rinnovaContrattoStaff(chiave, 'breve');
+    return { ok: false, messaggio: 'Gestione staff non disponibile.' };
   }
 
   _generaStaffLiberi() {
@@ -5447,37 +5224,13 @@ class MotoreGioco {
   }
 
   rilasciaStaffAR1(chiave) {
-    if (this.stato.faseCorrente !== 'pausa_invernale') return { ok: false, messaggio: 'Il mercato è chiuso.' };
-    const m = this.stato.staff?.[chiave];
-    if (!m) return { ok: false, messaggio: 'Ruolo non occupato.' };
-    const anni  = Math.max(0, (m.contratto?.scadenza || this.stato.stagione) - this.stato.stagione);
-    const penale = anni > 0 ? Math.round((m.contratto?.stipendio || 0) * 0.30) : 0;
-    if (penale > 0) this.registraSpesa('staff', penale, 'Rescissione ' + (m.nome || chiave));
-    this.stato.staff[chiave] = null;
-    this.salva();
-    return { ok: true, costo: penale, messaggio: (m.nome || chiave) + ' rilasciato.' };
+    /* Gestione staff rimossa — staff non individuale */
+    return { ok: false, messaggio: 'Gestione staff non disponibile.' };
   }
 
   ingaggiaStaffAR1(chiave, staffLiberoId) {
-    if (this.stato.faseCorrente !== 'pausa_invernale') return { ok: false, messaggio: 'Il mercato è chiuso.' };
-    const pool = this.stato._staffLiberi || [];
-    const idx  = pool.findIndex(s => s.id === staffLiberoId);
-    if (idx === -1) return { ok: false, messaggio: 'Candidato non disponibile.' };
-    const m  = pool[idx];
-    const ok = this.registraSpesa('staff', m.richiestaBase, 'Ingaggio ' + m.nome);
-    if (!ok) return { ok: false, messaggio: 'Budget insufficiente.' };
-    if (!this.stato.staff) this.stato.staff = {};
-    const membroNuovo = {
-      nome: m.nome, eta: m.eta, statistiche: m.statistiche,
-      contratto: { scadenza: this.stato.stagione + 1, stipendio: m.richiestaBase }
-    };
-    /* Adattamento anti-copia: staff tecnico neoingaggiato porta conoscenza gradualmente */
-    const TECH_ADAPT = ['capoIngegnere','direttoreAero','direttoreMeccanica','direttoreElettronica'];
-    if (TECH_ADAPT.includes(chiave)) membroNuovo.adattamento = { roundRestanti: 8 };
-    this.stato.staff[chiave] = membroNuovo;
-    pool.splice(idx, 1);
-    this.salva();
-    return { ok: true, messaggio: m.nome + ' ingaggiato come ' + chiave + '.' };
+    /* Gestione staff rimossa — staff non individuale */
+    return { ok: false, messaggio: 'Gestione staff non disponibile.' };
   }
 
   /* Budget invernale */
@@ -5586,18 +5339,8 @@ class MotoreGioco {
     const giornoCorrente = t.giorno;
     const sessioneCorrente = t.sessione;
 
-    /* Qualità base dipende dallo staff responsabile */
-    let qualitaBase = 0.60;
-    if (prog.staffBonus && this.stato.staff?.[prog.staffBonus]) {
-      const stats = this.stato.staff[prog.staffBonus].statistiche;
-      const val = stats[prog.staffBonusStat] || stats.innovazione || stats.precisione || 70;
-      qualitaBase = 0.50 + (val / 100) * 0.38;
-    }
-    /* Data Analyst bonus trasversale */
-    const daPrec = this.stato.staff?.dataAnalyst?.statistiche?.precisione || 70;
-    qualitaBase += (daPrec - 70) / 100 * 0.06;
-    /* Responsabile Dati e Telemetria: piccolo bonus */
-    if (this.stato.staff?.responsabileDatiTelemetria) qualitaBase += 0.02;
+    /* Qualità base fissa — staff non individuale */
+    let qualitaBase = 0.72;
 
     const rumore = g.gaussiana(0, 0.05);
     const qualita = Math.max(0.30, Math.min(1.0, qualitaBase + rumore));
@@ -5665,7 +5408,7 @@ class MotoreGioco {
 
   _generaReportGiornalieroTest(giorno) {
     const km = this.stato.conoscenzaMacchina || {};
-    const daPrec = this.stato.staff?.dataAnalyst?.statistiche?.precisione || 70;
+    const daPrec = 75; /* valore fisso — staff non individuale */
     const g = this.generatore;
     const conoscenzaMedia = ((km.aerodinamica || 0) + (km.meccanica || 0) + (km.powerUnit || 0) + (km.baseline || 0)) / 4;
 

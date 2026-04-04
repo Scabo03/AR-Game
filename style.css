@@ -1281,6 +1281,33 @@ body {
   margin-bottom: var(--spazio-s);
 }
 
+/* Sezione decisioni semplificata gara AR1 */
+.sezione-decisioni-gara {
+  background-color: var(--sfondo-elemento);
+  border: 1px solid var(--bordo);
+  border-radius: var(--raggio);
+  padding: var(--spazio-s) var(--spazio-m);
+  margin-bottom: var(--spazio-m);
+}
+
+/* Ruoli staff senza statistiche */
+.lista-ruoli-staff {
+  list-style: none;
+  padding: 0;
+  margin: var(--spazio-s) 0 0 0;
+}
+
+.riga-ruolo-staff {
+  padding: var(--spazio-xs) 0;
+  border-bottom: 1px solid var(--bordo);
+  font-size: var(--dim-piccolo);
+  color: var(--testo-primario);
+}
+
+.riga-ruolo-staff:last-child {
+  border-bottom: none;
+}
+
 /* Log eventi gara */
 .log-eventi-gara {
   max-height: 160px;

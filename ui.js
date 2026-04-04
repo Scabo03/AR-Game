@@ -741,130 +741,45 @@ function _renderPannelloStaff() {
   }
 }
 
-function _renderStaffAR1(contenuto, staff) {
-  /* Figure principali */
-  const figurePrincipali = [
-    { key: 'capoIngegnere',       titolo: 'Capo Ingegnere',               ruoloDesc: 'Coordina i tre Direttori Design. Determinante nei cambi d\'era regolamentare.' },
-    { key: 'direttoreAero',       titolo: 'Dir. Design Aerodinamico',     ruoloDesc: 'Responsabile del dipartimento aerodinamica.' },
-    { key: 'direttoreMeccanica',  titolo: 'Dir. Design Meccanico',        ruoloDesc: 'Responsabile di sospensioni, idraulica e cockpit.' },
-    { key: 'direttoreElettronica',titolo: 'Dir. Design Elettronica',      ruoloDesc: 'Responsabile software, MGU-K, MGU-H e sistemi elettronici.' },
-    { key: 'direttoreGara',       titolo: 'Direttore di Gara',            ruoloDesc: 'Supervisiona pit stop, gestione gomme e coperte termiche.' },
-    { key: 'dataAnalyst',         titolo: 'Data Analyst Senior',          ruoloDesc: 'Elabora i dati FP e produce stime di performance.' }
+function _renderStaffAR1(contenuto, _staff) {
+  /* Staff senza nomi individuali né statistiche — solo ruoli */
+  const card = crea('div', { class: 'card' });
+  card.appendChild(crea('p', { class: 'card-etichetta' }, 'Organico tecnico'));
+  const ruoli = [
+    'Capo Ingegnere',
+    'Dir. Design Aerodinamico',
+    'Dir. Design Meccanico',
+    'Dir. Design Elettronica',
+    'Direttore di Gara',
+    'Data Analyst Senior',
+    'Direttore Logistica',
+    'Responsabile Hospitality',
+    'Resp. Relazioni Istituzionali',
+    'Social Media Manager',
+    'Preparatore Atletico'
   ];
-
-  const nomiStat = {
-    coordinamento: 'Coordinamento', strategia: 'Visione strategica', esperienza: 'Esperienza',
-    innovazione: 'Innovazione', precisione: 'Precisione',
-    pitStop: 'Gestione pit stop', gestioneGomme: 'Gestione gomme',
-    velocita: 'Velocità analisi', sintesi: 'Sintesi dati',
-    comunicazione: 'Comunicazione', carisma: 'Carisma',
-    fitness: 'Preparazione fisica', recupero: 'Gestione recupero',
-    efficienza: 'Efficienza operativa', negoziazione: 'Negoziazione', relazioni: 'Relazioni'
-  };
-
-  const titoloP = crea('p', { class: 'card-etichetta' }, 'Figure principali');
-  contenuto.appendChild(titoloP);
-
-  figurePrincipali.forEach(({ key, titolo, ruoloDesc }) => {
-    const membro = staff[key];
-    if (!membro) return;
-
-    const card = crea('div', {
-      class: 'scheda-staff',
-      role: 'article',
-      'aria-label': `${titolo}: ${membro.nome}`
-    });
-
-    const intestazione = crea('div', { class: 'intestazione-staff' });
-    intestazione.appendChild(crea('span', { class: 'nome-staff' }, membro.nome));
-    intestazione.appendChild(crea('span', { class: 'ruolo-staff' }, titolo));
-    card.appendChild(intestazione);
-
-    card.appendChild(crea('p', { class: 'descrizione-ruolo-staff' }, ruoloDesc));
-
-    if (membro.statistiche) {
-      const dl = crea('dl', { class: 'lista-stat-staff' });
-      Object.entries(membro.statistiche).forEach(([k, v]) => {
-        const nome = nomiStat[k] || k;
-        const cat = v >= 90 ? 'Eccellente' : v >= 82 ? 'Ottimo' : v >= 74 ? 'Buono' : v >= 64 ? 'Sufficiente' : 'Debole';
-        dl.appendChild(crea('dt', {}, nome));
-        dl.appendChild(crea('dd', {
-          class: 'stat-staff stat-' + cat.toLowerCase(),
-          'aria-label': nome + ': ' + cat
-        }, cat));
-      });
-      card.appendChild(dl);
-    }
-
-    if (membro.contratto) {
-      const stagione = motore.stato.stagione;
-      const scad     = membro.contratto.scadenza;
-      const scadoOra = scad <= stagione;
-      const scadePross = scad === stagione + 1;
-      const classeContr = scadoOra ? 'testo-avviso' : scadePross ? 'testo-attenzione' : 'card-etichetta';
-      const testoContr  = scadoOra
-        ? `Contratto scaduto · Rinnova nella pausa invernale`
-        : scadePross
-          ? `Contratto fino al ${scad} · Scade a fine stagione · ${formatMoneta(membro.contratto.stipendio)}/anno`
-          : `Contratto fino al ${scad} · ${formatMoneta(membro.contratto.stipendio)}/anno`;
-      card.appendChild(crea('p', { class: classeContr, role: scadoOra ? 'alert' : undefined }, testoContr));
-    }
-
-    contenuto.appendChild(card);
+  const ul = crea('ul', { class: 'lista-ruoli-staff', 'aria-label': 'Ruoli dello staff tecnico' });
+  ruoli.forEach(r => {
+    const li = crea('li', { class: 'riga-ruolo-staff', 'aria-label': r }, r);
+    ul.appendChild(li);
   });
-
-  /* Figure minori */
-  const figureMinori = [
-    { key: 'direttoreLogistica',          titolo: 'Direttore Logistica' },
-    { key: 'responsabileHospitality',     titolo: 'Responsabile Hospitality' },
-    { key: 'responsabileRelazioni',       titolo: 'Resp. Relazioni Istituzionali' },
-    { key: 'socialMediaManager',          titolo: 'Social Media Manager' },
-    { key: 'preparatoreAtletico',         titolo: 'Preparatore Atletico' },
-    { key: 'responsabileDatiTelemetria',  titolo: 'Responsabile Dati e Telemetria' },
-    { key: 'coordinatoreOperativo',       titolo: 'Coordinatore Operativo' },
-    { key: 'responsabileComunicazione',   titolo: 'Resp. Comunicazione Tecnica' }
-  ];
-
-  const minoriPresenti = figureMinori.filter(f => staff[f.key]);
-  if (minoriPresenti.length > 0) {
-    const titoloM = crea('p', { class: 'card-etichetta margine-sopra' }, 'Figure operative');
-    contenuto.appendChild(titoloM);
-
-    minoriPresenti.forEach(({ key, titolo }) => {
-      const membro = staff[key];
-      const riga = crea('div', { class: 'riga-staff-minore', role: 'listitem', 'aria-label': titolo + ': ' + membro.nome });
-      riga.appendChild(crea('span', { class: 'nome-staff-minore' }, membro.nome));
-      riga.appendChild(crea('span', { class: 'ruolo-staff-minore' }, titolo));
-      /* Dettaglio speciale per Direttore Logistica: mostra risparmio atteso */
-      if (key === 'direttoreLogistica') {
-        const eff      = membro.statistiche?.efficienza || 65;
-        const costoBase = 480000;
-        const costoEff  = Math.round(costoBase * (1.4 - (eff / 100) * 0.8));
-        const costoMedio = Math.round(costoBase * (1.4 - 0.65 * 0.8));
-        const risparmio  = costoMedio - costoEff;
-        const note = `Efficienza ${eff}% · Costo stimato ${formatMoneta(costoEff)}/trasferta` +
-          (risparmio > 0 ? ` · Risparmio vs media: −${formatMoneta(risparmio)}` : '');
-        riga.appendChild(crea('span', { class: 'nota-staff-minore' }, note));
-      }
-      contenuto.appendChild(riga);
-    });
-  }
+  card.appendChild(ul);
+  card.appendChild(crea('p', {
+    class: 'card-etichetta',
+    style: 'margin-top:var(--spazio-s); font-size:var(--dim-piccolo);'
+  }, 'Staff operativo stabile. Nessuna gestione individuale.'));
+  contenuto.appendChild(card);
 }
 
 function _renderStaffRidotto(contenuto, stato) {
-  /* AR3/AR2: poche figure chiave */
-  const voci = [
-    { label: 'Capo Ingegnere', valore: stato.staff?.capoIngegnere?.nome || '—' },
-    { label: 'Ingegnere di Gara', valore: stato.staff?.direttoreGara?.nome || '—' },
-    { label: 'Preparatore Atletico', valore: stato.staff?.preparatoreAtletico?.nome || '—' }
-  ];
+  /* AR3/AR2: ruoli senza nomi individuali */
   const card = crea('div', { class: 'card' });
-  const dl = crea('dl', { class: 'lista-dati' });
-  voci.forEach(({ label, valore }) => {
-    dl.appendChild(crea('dt', {}, label));
-    dl.appendChild(crea('dd', {}, valore));
+  card.appendChild(crea('p', { class: 'card-etichetta' }, 'Organico tecnico'));
+  const ul = crea('ul', { class: 'lista-ruoli-staff', 'aria-label': 'Ruoli staff' });
+  ['Capo Ingegnere', 'Ingegnere di Gara', 'Preparatore Atletico'].forEach(r => {
+    ul.appendChild(crea('li', { class: 'riga-ruolo-staff', 'aria-label': r }, r));
   });
-  card.appendChild(dl);
+  card.appendChild(ul);
   contenuto.appendChild(card);
 }
 
@@ -5631,8 +5546,8 @@ function avviaQualificaAR1(circuito, meteo) {
 
   _bonusQualificaAR1Acc = 0;
   _decisioniQualificaAR1 = {
-    pilota1: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1], timing: 'tardi', settori: 'bilanciato' },
-    pilota2: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1], timing: 'tardi', settori: 'bilanciato' }
+    pilota1: { gomma: circuito.mescole[circuito.mescole.length - 1] },
+    pilota2: { gomma: circuito.mescole[circuito.mescole.length - 1] }
   };
 
   _renderFaseQualificaAR1();
@@ -5716,56 +5631,10 @@ function _renderFaseQualificaAR1() {
       gruppoGomme.appendChild(btn);
     });
     pannelloPilota.appendChild(gruppoGomme);
-
-    /* Manda in pista o rimani ai box */
-    pannelloPilota.appendChild(crea('p', { style: 'font-size:var(--dim-piccolo); color:var(--testo-secondario); margin-top:var(--spazio-s)' }, 'Azione:'));
-    const gruppoAzione = crea('div', { class: 'gruppo-decisione-qualifica' });
-    [{ v: true, label: 'In pista' }, { v: false, label: 'Ai box' }].forEach(({ v, label }) => {
-      const btn = crea('button', {
-        class: 'btn-decisione' + (dec.mandaInPista === v ? ' selezionato' : ''),
-        'aria-label': label + (dec.mandaInPista === v ? ', selezionato' : ''),
-        'aria-pressed': dec.mandaInPista === v ? 'true' : 'false'
-      }, label);
-      btn.addEventListener('click', () => {
-        _decisioniQualificaAR1[chiave].mandaInPista = v;
-        _renderFaseQualificaAR1();
-      });
-      gruppoAzione.appendChild(btn);
-    });
-    pannelloPilota.appendChild(gruppoAzione);
-
-    /* Timing giro veloce */
-    pannelloPilota.appendChild(crea('p', { style: 'font-size:var(--dim-piccolo); color:var(--testo-secondario); margin-top:var(--spazio-s)' }, 'Timing giro:'));
-    const gruppoTiming = crea('div', { class: 'gruppo-decisione-qualifica' });
-    [{ v: 'presto', label: 'Presto' }, { v: 'centrale', label: 'Centrale' }, { v: 'tardi', label: 'Tardi' }].forEach(({ v, label }) => {
-      const btn = crea('button', {
-        class: 'btn-decisione' + (dec.timing === v ? ' selezionato' : ''),
-        'aria-label': label + (dec.timing === v ? ', selezionato' : ''),
-        'aria-pressed': dec.timing === v ? 'true' : 'false'
-      }, label);
-      btn.addEventListener('click', () => { _decisioniQualificaAR1[chiave].timing = v; _renderFaseQualificaAR1(); });
-      gruppoTiming.appendChild(btn);
-    });
-    pannelloPilota.appendChild(gruppoTiming);
-
-    /* Strategia settori */
-    pannelloPilota.appendChild(crea('p', { style: 'font-size:var(--dim-piccolo); color:var(--testo-secondario); margin-top:var(--spazio-s)' }, 'Settori:'));
-    const gruppoSettori = crea('div', { class: 'gruppo-decisione-qualifica' });
-    [{ v: 'bilanciato', label: 'Bilanciato' }, { v: 'trazione', label: 'Trazione' }, { v: 'alta_velocita', label: 'Alta vel.' }].forEach(({ v, label }) => {
-      const btn = crea('button', {
-        class: 'btn-decisione' + (dec.settori === v ? ' selezionato' : ''),
-        'aria-label': label + (dec.settori === v ? ', selezionato' : ''),
-        'aria-pressed': dec.settori === v ? 'true' : 'false'
-      }, label);
-      btn.addEventListener('click', () => { _decisioniQualificaAR1[chiave].settori = v; _renderFaseQualificaAR1(); });
-      gruppoSettori.appendChild(btn);
-    });
-    pannelloPilota.appendChild(gruppoSettori);
-
     contenuto.appendChild(pannelloPilota);
   });
 
-  annunciaVoiceOver((['Q1', 'Q2', 'Q3'][sq.segmentoCorrente - 1]) + ', checkpoint 1. Scegli mescola, azione, timing e settori per ogni pilota, poi avanza.');
+  annunciaVoiceOver((['Q1', 'Q2', 'Q3'][sq.segmentoCorrente - 1]) + '. Scegli la mescola per ogni pilota, poi avanza.');
 }
 
 function _renderRisultatoCheckpointQ(risultato, circuito) {
@@ -5795,10 +5664,38 @@ function _renderRisultatoCheckpointQ(risultato, circuito) {
 
     contenuto.appendChild(card);
 
+    /* Se tutti i piloti del giocatore sono stati eliminati, mostra direttamente la griglia finale */
+    if (risultato.eConclusaQualifica || risultato.tuttiGiocatoriEliminati) {
+      el('btn-checkpoint-qualifica').classList.add('nascosta');
+      const nomeEl = nomeSegmento;
+      const btnFineQ = el('btn-fine-qualifica');
+      btnFineQ.classList.remove('nascosta');
+      const btnFineQFresh = btnFineQ.cloneNode(true);
+      btnFineQ.parentNode.replaceChild(btnFineQFresh, btnFineQ);
+      btnFineQFresh.addEventListener('click', () => {
+        audio.fineSessione();
+        nascondiWidgetMeteo();
+        const pannello = el('pannello-qualifica-ar1');
+        pannello.classList.add('nascosta');
+        pannello.setAttribute('aria-hidden', 'true');
+        motore.avanzaFase();
+        _routerPrincipale();
+      });
+      /* Mostra griglia finale */
+      const griglia = motore.stato.grigliaPartenza || [];
+      const cardGriglia = crea('div', { class: 'card' });
+      cardGriglia.appendChild(crea('p', { class: 'card-etichetta' }, 'Griglia di partenza definitiva'));
+      _appendClassificaQualifica(cardGriglia, griglia, []);
+      contenuto.appendChild(cardGriglia);
+      annunciaVoiceOver('Entrambi i piloti eliminati in ' + nomeEl + '. Qualifica terminata. ' +
+        (griglia[0]?.pilota?.nome || '—') + ' in pole position.');
+      return;
+    }
+
     /* Prepara decisioni per il segmento successivo e re-render */
     _decisioniQualificaAR1 = {
-      pilota1: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1], timing: 'tardi', settori: 'bilanciato' },
-      pilota2: { mandaInPista: true, gomma: circuito.mescole[circuito.mescole.length - 1], timing: 'tardi', settori: 'bilanciato' }
+      pilota1: { gomma: circuito.mescole[circuito.mescole.length - 1] },
+      pilota2: { gomma: circuito.mescole[circuito.mescole.length - 1] }
     };
 
     /* Aspetta un click per procedere al segmento successivo */
@@ -5900,6 +5797,8 @@ function _appendClassificaQualifica(contenitore, lista, eliminati) {
    ============================================================ */
 
 function _calcolaBonusCheckpointDecisioni(decisioni, { tipo, circuito, meteo }) {
+  /* Le scelte del giocatore possono solo migliorare i risultati o restare neutre,
+     mai peggiorarli rispetto alla simulazione automatica. */
   let bonus = 0;
   const usuraTipo  = circuito?.usuraGomme || 'media';
   const usuraAlta  = ['alta', 'molto_alta'].includes(usuraTipo);
@@ -5909,15 +5808,13 @@ function _calcolaBonusCheckpointDecisioni(decisioni, { tipo, circuito, meteo }) 
   const mescole    = circuito?.mescole || [];
 
   if (tipo === 'qualifica_ar1') {
-    /* Timing: tardi = track evolution, presto = meno grip */
+    /* Solo gomma influisce: la softest è già selezionata di default */
     const p1 = decisioni.pilota1 || {};
     const p2 = decisioni.pilota2 || {};
     [p1, p2].forEach(d => {
-      if (d.timing === 'tardi')   bonus += 0.15;
-      else if (d.timing === 'presto') bonus -= 0.1;
-      /* Settori: trazione su circuiti lenti, alta velocità su circuiti veloci */
-      if (d.settori === 'trazione'    && ['alto', 'molto_alto'].includes(carico)) bonus += 0.1;
-      if (d.settori === 'alta_velocita' && ['basso', 'molto_basso'].includes(carico)) bonus += 0.1;
+      const softestM = mescole.length > 0 ? mescole[mescole.length - 1] : null;
+      if (pioggia && (d.gomma === 'INTERMEDIA' || d.gomma === 'FULL_WET')) bonus += 0.3;
+      else if (softestM && d.gomma === softestM && !pioggia) bonus += 0.1;
     });
   }
 
@@ -5928,39 +5825,30 @@ function _calcolaBonusCheckpointDecisioni(decisioni, { tipo, circuito, meteo }) 
     } else if (softestM && decisioni.mescola === softestM) {
       bonus += 0.3;
     }
-    if (decisioni.timing === 'tardi')  bonus += 0.4;
-    else if (decisioni.timing === 'presto') bonus -= 0.2;
+    if (decisioni.timing === 'tardi') bonus += 0.4;
   }
 
   if (tipo === 'gara_ar3') {
     if (decisioni.ritmo === 'push' && usuraBassa && !pioggia) bonus += 0.6;
-    else if (decisioni.ritmo === 'push' && usuraAlta)  bonus -= 0.4;
-    else if (decisioni.ritmo === 'push' && pioggia)    bonus -= 0.5;
     else if (decisioni.ritmo === 'conserva' && usuraAlta) bonus += 0.3;
-    else if (decisioni.ritmo === 'conserva' && usuraBassa) bonus -= 0.3;
     if (decisioni.gestioneGomme === 'cautelosa' && usuraAlta)  bonus += 0.4;
     else if (decisioni.gestioneGomme === 'aggressiva' && usuraBassa) bonus += 0.3;
-    else if (decisioni.gestioneGomme === 'aggressiva' && usuraAlta)  bonus -= 0.5;
-    else if (decisioni.gestioneGomme === 'cautelosa'  && usuraBassa) bonus -= 0.2;
   }
 
   if (tipo === 'gara_ar2_cp1') {
     if (decisioni.ritmo === 'push' && usuraBassa)  bonus += 0.4;
-    else if (decisioni.ritmo === 'push' && usuraAlta) bonus -= 0.3;
     else if (decisioni.ritmo === 'conserva' && usuraAlta) bonus += 0.3;
     if (decisioni.sostaQuando === 'presto' && usuraAlta)  bonus += 0.4;
     else if (decisioni.sostaQuando === 'tardi' && usuraBassa) bonus += 0.3;
-    else if (decisioni.sostaQuando === 'presto' && usuraBassa) bonus -= 0.2;
   }
 
   if (tipo === 'gara_ar2_cp2') {
-    if (decisioni.ritmo === 'push')    bonus += 0.2;
-    else if (decisioni.ritmo === 'conserva') bonus -= 0.2;
+    if (decisioni.ritmo === 'push') bonus += 0.2;
     const softestM = mescole.length > 0 ? mescole[mescole.length - 1] : null;
     if (softestM && decisioni.mescolaFinale === softestM) bonus += 0.3;
   }
 
-  return Math.max(-2, Math.min(2, bonus));
+  return Math.min(2, bonus);
 }
 
 /* ============================================================
@@ -6547,55 +6435,62 @@ function _renderCheckpointGaraAR1(risultato, circuito) {
 
   const sg = motore.stato.statoGaraAttivo;
   const stato = motore.stato;
+  const piloti = stato.piloti || [];
 
-  /* Pannello decisioni per ogni pilota */
-  (stato.piloti || []).forEach((pilota, idx) => {
-    const chiave  = idx === 0 ? 'pilota1' : 'pilota2';
-    const dec     = _decisioniGaraAR1[chiave];
-
-    /* Trova partecipante corrispondente per dati live */
-    const partecipante = sg?.partecipanti?.find(p => p.isGiocatore && p.pilotaIndex === idx);
-
-    const pannelloPilota = crea('div', { class: 'pannello-pilota-gara',
-      'aria-label': `Decisioni per ${pilota.nome}` });
-    pannelloPilota.appendChild(crea('h4', {}, pilota.nome));
-
-    /* Dati live pilota */
-    if (partecipante) {
-      const dati = [
-        `Pos: ${partecipante.posizione || '—'}`,
-        `Gap: ${partecipante.posizione === 1 ? 'leader' : '+' + (partecipante.gap || 0) + 's'}`,
-        `Gomma: ${partecipante.gommaCorrente} — Usura: ${Math.round(partecipante.usuraGomma || 0)}%`,
-        `Soste: ${partecipante.fermateEffettuate || 0}`
-      ].join('  ·  ');
-      pannelloPilota.appendChild(crea('p', { class: 'dati-pilota-gara', 'aria-label': dati }, dati));
-    }
-
-    /* Scelta ritmo */
-    pannelloPilota.appendChild(crea('p', { style: 'font-size:var(--dim-piccolo); color:var(--testo-secondario); margin-top:var(--spazio-s)' }, 'Ritmo:'));
-    const gruppoRitmo = crea('div', { class: 'gruppo-decisione-qualifica' });
-    [{ v: 'push', label: 'Push' }, { v: 'normale', label: 'Normale' }, { v: 'conserva', label: 'Conserva' }].forEach(({ v, label }) => {
-      const btn = crea('button', {
-        class: 'btn-decisione' + (dec.ritmo === v ? ' selezionato' : ''),
-        'aria-label': label + (dec.ritmo === v ? ', selezionato' : ''),
-        'aria-pressed': dec.ritmo === v ? 'true' : 'false'
-      }, label);
-      btn.addEventListener('click', () => {
-        _decisioniGaraAR1[chiave].ritmo = v;
-        _renderCheckpointGaraAR1(risultato, circuito);
-      });
-      gruppoRitmo.appendChild(btn);
+  /* ── Ritmo squadra (un'unica scelta applicata a entrambi i piloti) ── */
+  const ritmoCorrente = _decisioniGaraAR1.pilota1.ritmo || 'normale';
+  const sezioneRitmo = crea('div', { class: 'sezione-decisioni-gara', 'aria-label': 'Ritmo squadra' });
+  sezioneRitmo.appendChild(crea('p', {
+    style: 'font-size:var(--dim-piccolo); color:var(--testo-secondario); margin-bottom:var(--spazio-xs);'
+  }, 'Ritmo:'));
+  const gruppoRitmo = crea('div', { class: 'gruppo-decisione-qualifica' });
+  [
+    { v: 'push',     label: 'Spingi',   desc: 'Ritmo massimo — più veloce, maggiore usura gomme' },
+    { v: 'normale',  label: 'Normale',  desc: 'Ritmo regolare — bilanciato' },
+    { v: 'conserva', label: 'Conserva', desc: 'Ritmo gestito — risparmio gomme' }
+  ].forEach(({ v, label, desc }) => {
+    const btn = crea('button', {
+      class: 'btn-decisione' + (ritmoCorrente === v ? ' selezionato' : ''),
+      'aria-label': desc + (ritmoCorrente === v ? ', selezionato' : ''),
+      'aria-pressed': ritmoCorrente === v ? 'true' : 'false'
+    }, label);
+    btn.addEventListener('click', () => {
+      _decisioniGaraAR1.pilota1.ritmo = v;
+      _decisioniGaraAR1.pilota2.ritmo = v;
+      _renderCheckpointGaraAR1(risultato, circuito);
     });
-    pannelloPilota.appendChild(gruppoRitmo);
+    gruppoRitmo.appendChild(btn);
+  });
+  sezioneRitmo.appendChild(gruppoRitmo);
+  contenuto.appendChild(sezioneRitmo);
 
-    /* Pit stop */
-    pannelloPilota.appendChild(crea('p', { style: 'font-size:var(--dim-piccolo); color:var(--testo-secondario); margin-top:var(--spazio-s)' }, 'Sosta:'));
+  /* ── Pit stop per pilota ── */
+  const prossimoCPGiro = (sg?.giroCorrente || 0) + 5;
+  const mescolaDisp = [...(circuito?.mescole || []), 'INTERMEDIA', 'FULL_WET'];
+
+  piloti.forEach((pilota, idx) => {
+    const chiave = idx === 0 ? 'pilota1' : 'pilota2';
+    const dec = _decisioniGaraAR1[chiave];
+    const partecipante = sg?.partecipanti?.find(p => p.isGiocatore && p.pilotaIndex === idx);
+    if (!partecipante) return;
+
+    const usura = Math.round(partecipante.usuraGomma || 0);
+    const usuraLabel = usura < 35 ? 'buona' : usura < 65 ? 'media' : 'critica';
+    const soste = partecipante.fermateEffettuate || 0;
+    const sommarioPilota = `${pilota.nome}: P${partecipante.posizione || '—'} — ${partecipante.gommaCorrente}, usura ${usuraLabel} (${usura}%) — ${soste} sost${soste === 1 ? 'a' : 'e'}`;
+
+    const sezionePilota = crea('div', {
+      class: 'sezione-decisioni-gara',
+      'aria-label': sommarioPilota
+    });
+    sezionePilota.appendChild(crea('p', {
+      style: 'font-size:var(--dim-piccolo); margin-bottom:var(--spazio-xs);'
+    }, sommarioPilota));
+
     const gruppoSosta = crea('div', { class: 'gruppo-decisione-qualifica', style: 'flex-wrap:wrap;' });
-
-    /* Bottone nessuna sosta */
     const btnNoSosta = crea('button', {
       class: 'btn-decisione' + (!dec.pitStop ? ' selezionato' : ''),
-      'aria-label': 'Nessuna sosta pianificata' + (!dec.pitStop ? ', selezionato' : ''),
+      'aria-label': 'Nessuna sosta per ' + pilota.nome + (!dec.pitStop ? ', selezionato' : ''),
       'aria-pressed': !dec.pitStop ? 'true' : 'false'
     }, 'Nessuna sosta');
     btnNoSosta.addEventListener('click', () => {
@@ -6604,15 +6499,12 @@ function _renderCheckpointGaraAR1(risultato, circuito) {
     });
     gruppoSosta.appendChild(btnNoSosta);
 
-    /* Soste per ogni mescola disponibile nel checkpoint successivo */
-    const prossimoCPGiro = (sg?.giroCorrente || 0) + 5; /* Giro centrale del prossimo checkpoint */
-    const mescolaDisp = [...(circuito?.mescole || []), 'INTERMEDIA', 'FULL_WET'];
     mescolaDisp.forEach(m => {
       const mescola = DATI.MESCOLE[m];
       const isSelezionato = dec.pitStop?.mescola === m;
       const btn = crea('button', {
         class: 'btn-gomma' + (isSelezionato ? ' selezionato' : ''),
-        'aria-label': 'Sosta con ' + (mescola ? mescola.nome : m) + (isSelezionato ? ', selezionata' : ''),
+        'aria-label': 'Sosta ' + pilota.nome + ' con ' + (mescola ? mescola.nome : m) + (isSelezionato ? ', selezionata' : ''),
         'aria-pressed': isSelezionato ? 'true' : 'false'
       }, 'Sosta ' + m);
       btn.addEventListener('click', () => {
@@ -6622,8 +6514,8 @@ function _renderCheckpointGaraAR1(risultato, circuito) {
       gruppoSosta.appendChild(btn);
     });
 
-    pannelloPilota.appendChild(gruppoSosta);
-    contenuto.appendChild(pannelloPilota);
+    sezionePilota.appendChild(gruppoSosta);
+    contenuto.appendChild(sezionePilota);
   });
 }
 
@@ -7546,146 +7438,23 @@ function _renderCapitoloPiloti(contenuto) {
   }
 }
 
-/* ----- Capitolo 6: Mercato staff ----- */
+/* ----- Capitolo 6: Staff (solo informativo — nessuna gestione) ----- */
 function _renderCapitoloStaff(contenuto) {
-  const mercato = motore.ottieniMercatoStaffAR1?.();
-  if (!mercato) return;
-
-  const nomiRuoli = {
-    capoIngegnere:              'Capo Ingegnere',
-    direttoreAero:              'Dir. Design Aerodinamico',
-    direttoreMeccanica:         'Dir. Design Meccanico',
-    direttoreElettronica:       'Dir. Design Elettronica',
-    direttoreGara:              'Direttore di Gara',
-    dataAnalyst:                'Data Analyst Senior',
-    socialMediaManager:         'Social Media Manager',
-    preparatoreAtletico:        'Preparatore Atletico',
-    direttoreLogistica:         'Direttore Logistica',
-    responsabileRelazioni:      'Responsabile Relazioni',
-    responsabileHospitality:    'Responsabile Hospitality',
-    responsabileDatiTelemetria: 'Resp. Dati e Telemetria',
-    coordinatoreOperativo:      'Coordinatore Operativo',
-    responsabileComunicazione:  'Resp. Comunicazione Tecnica'
-  };
-
-  /* Staff attuale */
-  const cardAtt = crea('div', { class: 'card' });
-  cardAtt.appendChild(crea('h3', {}, 'Staff attuale'));
-  mercato.staff.forEach(({ chiave, membro, inScadenza, preScadenza, gardening }) => {
-    const classeRiga = 'riga-contratto-scadenza' +
-      (inScadenza ? ' bordo-avviso' : preScadenza ? ' bordo-attenzione' : '');
-    const labelRiga = (nomiRuoli[chiave] || chiave) +
-      (membro ? ': ' + membro.nome + (inScadenza ? ', contratto scaduto' : preScadenza ? ', contratto in scadenza' : '') : ': vacante');
-    const riga = crea('div', { class: classeRiga, 'aria-label': labelRiga });
-
-    riga.appendChild(crea('span', { class: 'nome-staff' }, nomiRuoli[chiave] || chiave));
-
-    if (membro) {
-      let testoContratto, classeContratto;
-      if (inScadenza) {
-        testoContratto = membro.nome + ' — contratto scaduto';
-        classeContratto = 'testo-avviso';
-      } else if (preScadenza) {
-        testoContratto = membro.nome + ' · scade a fine stagione ' + (membro.contratto?.scadenza || '?');
-        classeContratto = 'testo-attenzione';
-      } else {
-        testoContratto = membro.nome + ' · scad. ' + (membro.contratto?.scadenza || '?');
-        classeContratto = 'card-etichetta';
-      }
-      riga.appendChild(crea('span', { class: classeContratto }, testoContratto));
-
-      if (inScadenza || preScadenza) {
-        /* Opzioni di rinnovo */
-        const opzioni = motore.ottieniOpzioniRinnovoStaff?.(chiave) || [];
-        const gruppoRinnovo = crea('div', { class: 'gruppo-azioni margine-sopra', role: 'group', 'aria-label': 'Opzioni rinnovo ' + membro.nome });
-        opzioni.forEach(opt => {
-          const btn = crea('button', {
-            class: 'btn-secondario' + (opt.fattibile ? '' : ' disabilitato'),
-            'aria-label': opt.label + ' per ' + membro.nome + ': ' + opt.descrizione + ' — costo totale ' + formatMoneta(opt.costoTotale),
-            disabled: !opt.fattibile || undefined
-          }, opt.label);
-          if (!opt.fattibile) btn.setAttribute('disabled', '');
-          btn.addEventListener('click', () => {
-            mostraDialogo(
-              opt.label + ' — ' + membro.nome,
-              opt.descrizione + '\nCosto totale: ' + formatMoneta(opt.costoTotale) + '. Scadenza: stagione ' + opt.scadenza + '.',
-              () => {
-                const ris = motore.rinnovaContrattoStaff(chiave, opt.id);
-                annunciaVoiceOver(ris.messaggio);
-                if (ris.ok) { audio.conferma(); _apriCapitoloPausa('staff'); }
-                else annunciaVoiceOver('Errore: ' + ris.messaggio);
-              }
-            );
-          });
-          gruppoRinnovo.appendChild(btn);
-        });
-        riga.appendChild(gruppoRinnovo);
-      }
-
-      if (inScadenza) {
-        /* Pulsante Rilascia (solo se già scaduto) */
-        const btnRilascia = crea('button', {
-          class: 'btn-azione btn-secondario',
-          'aria-label': 'Rilascia ' + membro.nome + ' senza rinnovo'
-        }, 'Rilascia');
-        btnRilascia.addEventListener('click', () => {
-          mostraDialogo('Rilascia ' + membro.nome, 'Confermi la rescissione del contratto di ' + membro.nome + '? Il ruolo resterà vacante.', () => {
-            const ris = motore.rilasciaStaffAR1(chiave);
-            annunciaVoiceOver(ris.messaggio);
-            if (ris.ok) { audio.conferma(); _apriCapitoloPausa('staff'); }
-          });
-        });
-        riga.appendChild(btnRilascia);
-      }
-    } else {
-      riga.appendChild(crea('span', { class: 'testo-avviso' }, 'Vacante'));
-    }
-    cardAtt.appendChild(riga);
-  });
-  contenuto.appendChild(cardAtt);
-
-  /* Candidati disponibili */
-  if (mercato.liberi.length > 0) {
-    const cardLib = crea('div', { class: 'card margine-sopra' });
-    cardLib.appendChild(crea('h3', {}, 'Candidati disponibili'));
-    mercato.liberi.forEach(cand => {
-      const ruoloNome = nomiRuoli[cand.chiaveRuolo] || cand.chiaveRuolo;
-      const card = crea('div', { class: 'scheda-pilota margine-sopra', 'aria-label': cand.nome + ', ' + ruoloNome });
-      const intest = crea('div', { class: 'intestazione-pilota' });
-      intest.appendChild(crea('span', { class: 'nome-pilota' }, cand.nome));
-      intest.appendChild(crea('span', { class: 'nazionalita-pilota' }, ruoloNome));
-      card.appendChild(intest);
-      const dl = crea('dl', { 'aria-label': 'Statistiche ' + cand.nome });
-      const stat = cand.statistiche || {};
-      Object.entries(stat).forEach(([k, v]) => {
-        dl.appendChild(crea('dt', {}, k));
-        dl.appendChild(crea('dd', {}, String(v)));
-      });
-      dl.appendChild(crea('dt', {}, 'Richiesta'));
-      dl.appendChild(crea('dd', {}, formatMoneta(cand.richiestaBase) + ' / anno'));
-      card.appendChild(dl);
-
-      /* Mostra il ruolo vacante corrispondente */
-      const ruoloVacante = mercato.staff.find(s => s.chiave === cand.chiaveRuolo && (!s.membro || s.inScadenza));
-      if (ruoloVacante) {
-        const btnIngaggia = crea('button', {
-          class: 'btn-azione margine-sopra',
-          'aria-label': 'Ingaggia ' + cand.nome + ' come ' + ruoloNome
-        }, 'Ingaggia');
-        btnIngaggia.addEventListener('click', () => {
-          mostraDialogo('Ingaggia ' + cand.nome, ruoloNome + ' — ' + formatMoneta(cand.richiestaBase) + ' / anno. Contratto di 2 stagioni.', () => {
-            const ris = motore.ingaggiaStaffAR1(cand.chiaveRuolo, cand.id);
-            annunciaVoiceOver(ris.messaggio);
-            if (ris.ok) { audio.conferma(); _apriCapitoloPausa('staff'); }
-            else annunciaVoiceOver('Errore: ' + ris.messaggio);
-          });
-        });
-        card.appendChild(btnIngaggia);
-      }
-      cardLib.appendChild(card);
-    });
-    contenuto.appendChild(cardLib);
-  }
+  const card = crea('div', { class: 'card' });
+  card.appendChild(crea('h3', {}, 'Organico tecnico'));
+  card.appendChild(crea('p', { class: 'card-etichetta' },
+    'Lo staff tecnico è stabile. Nessuna azione richiesta.'));
+  const ruoli = [
+    'Capo Ingegnere', 'Dir. Design Aerodinamico', 'Dir. Design Meccanico',
+    'Dir. Design Elettronica', 'Direttore di Gara', 'Data Analyst Senior',
+    'Direttore Logistica', 'Responsabile Hospitality', 'Resp. Relazioni Istituzionali',
+    'Social Media Manager', 'Preparatore Atletico'
+  ];
+  const ul = crea('ul', { class: 'lista-ruoli-staff', 'aria-label': 'Ruoli staff' });
+  ruoli.forEach(r => ul.appendChild(crea('li', { class: 'riga-ruolo-staff' }, r)));
+  card.appendChild(ul);
+  contenuto.appendChild(card);
+  motore.segnaCapitoloInvernale?.('staff');
 }
 
 /* ============================================================
